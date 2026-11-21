@@ -1,0 +1,11 @@
+rules_version = '2';
+// The Flutter app never talks to Firestore directly: all reads and writes go through the
+// FinBridge API, which uses the Admin SDK and enforces every rule itself. So direct
+// client access is denied completely.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
