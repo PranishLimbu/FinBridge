@@ -136,13 +136,39 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
     }
   }
 
+  void _stepBack() {
+    if (_busy) return;
+    if (_step > 0) {
+      setState(() {
+        if (_step == 2 && _customer != null && _customer!.accounts.where((a) => a.isActive).length == 1) {
+          _step = 0;
+        } else {
+          _step--;
+        }
+        _error = null;
+      });
+    } else {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = _isDeposit ? 'Cash deposit' : 'Cash withdrawal';
     return PopScope(
-      canPop: !_busy,
+      canPop: !_busy && _step == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _stepBack();
+      },
       child: Scaffold(
-        appBar: AppBar(title: Text(title)),
+        appBar: AppBar(
+          title: Text(title),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Back',
+            onPressed: _stepBack,
+          ),
+        ),
         body: Column(
           children: [
             const SimulatedBanner(),
@@ -221,6 +247,8 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
         const Text('Find the customer and check their photo and citizenship card before continuing.'),
         const SizedBox(height: 16),
         FilledButton.icon(onPressed: _pickCustomer, icon: const Icon(Icons.person_search), label: const Text('Search customer')),
+        const SizedBox(height: 12),
+        OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
       ];
 
   List<Widget> _stepAccount() {
@@ -302,6 +330,11 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
       FilledButton(
         onPressed: _amount > 0 && _amountError == null ? _toReview : null,
         child: const Text('Continue to review'),
+      ),
+      const SizedBox(height: 8),
+      OutlinedButton(
+        onPressed: _stepBack,
+        child: const Text('Back'),
       ),
     ];
   }

@@ -16,10 +16,12 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
   final _dashboardKey = GlobalKey<DashboardScreenState>();
+  final _journalKey = GlobalKey<JournalScreenState>();
 
   void _go(int i) {
     setState(() => _index = i);
     if (i == 0) _dashboardKey.currentState?.refresh();
+    if (i == 2) _journalKey.currentState?.refresh();
   }
 
   @override
@@ -27,7 +29,7 @@ class _HomeShellState extends State<HomeShell> {
     final pages = [
       DashboardScreen(key: _dashboardKey, onOpenTab: _go),
       const CustomerSearchScreen(),
-      const JournalScreen(),
+      JournalScreen(key: _journalKey),
       const TerminalScreen(),
     ];
     return Scaffold(

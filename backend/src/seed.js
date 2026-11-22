@@ -37,6 +37,7 @@ async function seed(store, { log = false } = {}) {
   });
 
   const customers = [
+    ['CUST-884101', 'Ram', 'Bahadur', 'Shrestha', '9841000001', '27-01-75-01234', '010201750004001', 35000, 'male'],
     ['CUST-884102', 'Hari', 'Bahadur', 'Thapa', '9851012347', '27-01-78-04912', '010201750004092', 25000, 'male'],
     ['CUST-884103', 'Sunita', null, 'Tamang', '9841234567', '27-02-70-11873', '010201750004311', 8200, 'female'],
     ['CUST-884104', 'Bikash', null, 'Shrestha', '9803456789', '25-03-75-22019', '010201750004587', 61000, 'male'],

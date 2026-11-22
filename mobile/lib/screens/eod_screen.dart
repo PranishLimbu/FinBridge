@@ -76,7 +76,14 @@ class _EodScreenState extends State<EodScreen> {
     final expected = (p?['expectedCash'] as num?)?.toDouble();
     final diff = (expected != null && _countedValue != null) ? _countedValue! - expected : null;
     return Scaffold(
-      appBar: AppBar(title: const Text('End-of-day cash count')),
+      appBar: AppBar(
+        title: const Text('End-of-day cash count'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Back',
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: Column(
         children: [
           const SimulatedBanner(),
