@@ -13,10 +13,10 @@ class JournalScreen extends StatefulWidget {
   const JournalScreen({super.key});
 
   @override
-  State<JournalScreen> createState() => _JournalScreenState();
+  State<JournalScreen> createState() => JournalScreenState();
 }
 
-class _JournalScreenState extends State<JournalScreen> {
+class JournalScreenState extends State<JournalScreen> {
   String? _type;
   String? _status;
   final _q = TextEditingController();
@@ -27,7 +27,7 @@ class _JournalScreenState extends State<JournalScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    refresh();
   }
 
   @override
@@ -35,6 +35,8 @@ class _JournalScreenState extends State<JournalScreen> {
     _q.dispose();
     super.dispose();
   }
+
+  Future<void> refresh() => _load();
 
   Future<void> _load() async {
     setState(() {

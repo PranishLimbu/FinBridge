@@ -114,7 +114,20 @@ class _OtpScreenState extends State<OtpScreen> {
     return PopScope(
       canPop: _closed,
       child: Scaffold(
-        appBar: AppBar(title: const Text('Customer OTP'), automaticallyImplyLeading: _closed),
+        appBar: AppBar(
+          title: const Text('Customer OTP'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: _closed ? 'Back' : 'Cancel & Back',
+            onPressed: () {
+              if (_closed) {
+                Navigator.of(context).pop();
+              } else {
+                _cancel();
+              }
+            },
+          ),
+        ),
         body: Column(
           children: [
             const SimulatedBanner(),

@@ -125,7 +125,16 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.pickMode ? 'Step 1: Find customer' : 'Customers')),
+      appBar: AppBar(
+        title: Text(widget.pickMode ? 'Step 1: Find customer' : 'Customers'),
+        leading: widget.pickMode
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                tooltip: 'Back',
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
+      ),
       floatingActionButton: widget.pickMode
           ? null
           : FloatingActionButton.extended(

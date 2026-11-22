@@ -7,6 +7,7 @@ import '../state/session.dart';
 import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
+import 'home_shell.dart';
 
 /// UC6 Receipt (Figure 11). Can be opened right after a transaction or from the journal.
 class ReceiptScreen extends StatefulWidget {
@@ -83,8 +84,25 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
   @override
   Widget build(BuildContext context) {
     final t = _t;
+    void goBack() {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => HomeShell(key: ValueKey(context.read<Session>().agent!.id))),
+        );
+      }
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Receipt')),
+      appBar: AppBar(
+        title: const Text('Receipt'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Back',
+          onPressed: goBack,
+        ),
+      ),
       body: Column(
         children: [
           const SimulatedBanner(),
@@ -148,7 +166,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                         ),
                       ],
                       const SizedBox(height: 8),
-                      OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done')),
+                      OutlinedButton(onPressed: goBack, child: const Text('Done')),
                     ],
                   ),
           ),

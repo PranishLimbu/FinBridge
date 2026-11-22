@@ -213,47 +213,75 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  void _stepBack() {
+    if (_busy) return;
+    if (_step > 0) {
+      setState(() {
+        _step--;
+        _error = null;
+      });
+    } else {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Customer onboarding')),
-      body: Column(
-        children: [
-          const SimulatedBanner(),
-          _stepper(),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Form(
-                  key: _forms[_step],
-                  child: switch (_step) {
-                    0 => _personal(),
-                    1 => _family(),
-                    2 => _address(),
-                    _ => _documents(),
-                  },
-                ),
-                const SizedBox(height: 16),
-                if (_error != null) ...[MessageBox(_error!), const SizedBox(height: 12)],
-                FilledButton(
-                  onPressed: _busy ? null : (_step < 3 ? _next : _submit),
-                  child: Text(_busy ? 'Submitting…' : _step < 3 ? 'Continue to ${_steps[_step + 1]}' : 'Submit for bank review'),
-                ),
-                if (_step > 0) ...[
-                  const SizedBox(height: 8),
-                  OutlinedButton(
-                    onPressed: _busy ? null : () => setState(() {
-                      _step--;
-                      _error = null;
-                    }),
-                    child: const Text('Back'),
-                  ),
-                ],
-              ],
-            ),
+    return PopScope(
+      canPop: !_busy && _step == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _stepBack();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Customer onboarding'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Back',
+            onPressed: _stepBack,
           ),
-        ],
+        ),
+        body: Column(
+          children: [
+            const SimulatedBanner(),
+            _stepper(),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  Form(
+                    key: _forms[_step],
+                    child: switch (_step) {
+                      0 => _personal(),
+                      1 => _family(),
+                      2 => _address(),
+                      _ => _documents(),
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  if (_error != null) ...[MessageBox(_error!), const SizedBox(height: 12)],
+                  FilledButton(
+                    onPressed: _busy ? null : (_step < 3 ? _next : _submit),
+                    child: Text(_busy ? 'Submitting…' : _step < 3 ? 'Continue to ${_steps[_step + 1]}' : 'Submit for bank review'),
+                  ),
+                  if (_step > 0) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: _busy ? null : _stepBack,
+                      child: const Text('Back'),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: _busy ? null : () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
