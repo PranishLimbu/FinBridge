@@ -11,11 +11,77 @@ class SimulatedBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       color: FbColors.danger,
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: const Text(
-        'SIMULATED • ACADEMIC PROTOTYPE • NO REAL MONEY',
+        'DEMO – NO REAL MONEY',
         textAlign: TextAlign.center,
         style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+      ),
+    );
+  }
+}
+
+/// FinBridge logo: navy tile with a bridge icon, the name, and "AGENT BANKING" in mint.
+class FbLogo extends StatelessWidget {
+  const FbLogo({super.key, this.compact = false});
+
+  /// Smaller version for app bars.
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final tile = compact ? 32.0 : 46.0;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: tile,
+          height: tile,
+          decoration: BoxDecoration(color: FbColors.primary, borderRadius: BorderRadius.circular(compact ? 8 : 12)),
+          child: Icon(Icons.account_balance, color: FbColors.accent, size: tile * 0.55),
+        ),
+        SizedBox(width: compact ? 8 : 10),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('FinBridge',
+                style: TextStyle(
+                    fontSize: compact ? 15 : 22, fontWeight: FontWeight.w800, color: FbColors.primary, height: 1.1)),
+            Text('AGENT BANKING',
+                style: TextStyle(
+                    fontSize: compact ? 8 : 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                    color: FbColors.accentDark)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Small label with an icon, shown above a form field (Figma style).
+class FieldLabel extends StatelessWidget {
+  const FieldLabel(this.text, {super.key, this.icon, this.trailing});
+
+  final String text;
+  final IconData? icon;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          if (icon != null) ...[Icon(icon, size: 16, color: FbColors.primary), const SizedBox(width: 6)],
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: FbColors.primary)),
+          ),
+          if (trailing != null) trailing!,
+        ],
       ),
     );
   }

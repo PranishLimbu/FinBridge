@@ -90,7 +90,7 @@ class ApiClient {
     } on ApiException {
       rethrow;
     } on TimeoutException {
-      throw ApiException('TIMEOUT', 'Firebase did not respond. Check the transaction status before trying again.');
+      throw ApiException('TIMEOUT', 'No response. Check the journal before trying again.');
     } on FirebaseException catch (e) {
       throw _fromFirebase(e);
     }
@@ -98,15 +98,15 @@ class ApiClient {
 
   ApiException _fromFirebase(FirebaseException e) => switch (e.code) {
         'permission-denied' =>
-          ApiException('FORBIDDEN', 'Firebase refused this action. You may not have permission for it.', status: 403),
+          ApiException('FORBIDDEN', 'You don’t have permission to do this.', status: 403),
         'unavailable' || 'network-request-failed' || 'deadline-exceeded' =>
-          ApiException('NETWORK', 'No connection to Firebase. Check your internet connection.'),
+          ApiException('NETWORK', 'No internet connection. Please try again.'),
         'unauthenticated' => () {
             onUnauthorised?.call();
             return ApiException('SESSION_EXPIRED', 'Your session has expired. Please log in again.', status: 401);
           }(),
         'aborted' => ApiException('CONFLICT', 'Someone else changed this record at the same time. Please try again.'),
-        _ => ApiException('ERROR', e.message ?? 'Firebase request failed (${e.code})'),
+        _ => ApiException('ERROR', 'Something went wrong (${e.code}). Please try again.'),
       };
 
   Future<dynamic> _get(List<String> s, Map<String, String> q) async {
@@ -316,10 +316,10 @@ class ApiClient {
     } on FirebaseAuthException catch (e) {
       throw switch (e.code) {
         'too-many-requests' => ApiException(
-            'TOO_MANY_ATTEMPTS', 'Too many wrong PINs. Firebase has paused logins for this ID; wait a few minutes.',
+            'TOO_MANY_ATTEMPTS', 'Too many wrong PINs. Try again in a few minutes.',
             status: 429),
         'user-disabled' => ApiException('ACCOUNT_INACTIVE', 'This agent account is not active.', status: 403),
-        'network-request-failed' => ApiException('NETWORK', 'No connection to Firebase. Check your internet connection.'),
+        'network-request-failed' => ApiException('NETWORK', 'No internet connection. Please try again.'),
         'operation-not-allowed' || 'configuration-not-found' => ApiException('AUTH_NOT_ENABLED',
             'Email/Password sign-in is not enabled in Firebase Authentication for this project.'),
         _ => ApiException('INVALID_CREDENTIALS', 'Agent ID or PIN is incorrect', status: 401),
@@ -628,7 +628,7 @@ class ApiClient {
     await _db.runTransaction((tx) async {
       // IDs are random; make sure neither is taken (the rules also refuse to overwrite).
       if ((await tx.get(_doc('customers', customerId))).exists || (await tx.get(_doc('accounts', accountNo))).exists) {
-        throw ApiException('CONFLICT', 'Please submit again.');
+        throw ApiException('CONFLICT', 'Something went wrong. Please submit again.');
       }
       tx.set(_doc('customers', customerId), {
         ...input,
@@ -1202,13 +1202,19 @@ class ApiClient {
         {
           'type': 'kyc_pending',
           'count': pendingKyc.docs.length,
-          'message': '${pendingKyc.docs.length} onboarding application(s) waiting for bank review',
+          'message': pendingKyc.docs.length == 1
+              ? '1 new account waiting for bank approval'
+              : '${pendingKyc.docs.length} new accounts waiting for bank approval',
         },
-      if (eodToday.docs.isEmpty) {'type': 'eod_due', 'message': 'End-of-day cash count not yet submitted'},
+      if (eodToday.docs.isEmpty) {'type': 'eod_due', 'message': 'End-of-day cash count not done yet'},
       if (awaitingOtp > 0)
-        {'type': 'pending_otp', 'count': awaitingOtp, 'message': '$awaitingOtp withdrawal(s) waiting for customer OTP'},
-      if (cash - reserve < 5000 * 100) {'type': 'low_float', 'message': 'Cash drawer is close to the minimum reserve'},
-      if (limit - cash < 5000 * 100) {'type': 'high_float', 'message': 'Cash drawer is close to its limit; request a rebalance'},
+        {
+          'type': 'pending_otp',
+          'count': awaitingOtp,
+          'message': awaitingOtp == 1 ? '1 withdrawal is waiting for OTP' : '$awaitingOtp withdrawals are waiting for OTP',
+        },
+      if (cash - reserve < 5000 * 100) {'type': 'low_float', 'message': 'Cash is near the minimum reserve'},
+      if (limit - cash < 5000 * 100) {'type': 'high_float', 'message': 'Cash is near the limit'},
     ];
     return {
       'agent': _publicAgent(agentId, agent),

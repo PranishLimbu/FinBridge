@@ -190,26 +190,54 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
     );
   }
 
+  /// "③ Step 3 of 4: Amount", a four-part bar, and the step names underneath.
   Widget _progress() {
     const labels = ['Customer', 'Account', 'Amount', 'Review'];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+    return Container(
+      color: FbColors.surface,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Step ${_step + 1} of 4: ${labels[_step]}', style: const TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
+          Row(children: [
+            CircleAvatar(
+              radius: 12,
+              backgroundColor: FbColors.primary,
+              child: Text('${_step + 1}',
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+            ),
+            const SizedBox(width: 8),
+            Text('Step ${_step + 1} of 4: ${labels[_step]}',
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: FbColors.primary)),
+          ]),
+          const SizedBox(height: 10),
           Row(
             children: [
               for (var i = 0; i < 4; i++)
                 Expanded(
-                  child: Container(
-                    height: 6,
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    decoration: BoxDecoration(
-                      color: i <= _step ? FbColors.primary : FbColors.border,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        height: 6,
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        decoration: BoxDecoration(
+                          color: i < _step
+                              ? FbColors.accentDark
+                              : i == _step
+                                  ? FbColors.primary
+                                  : FbColors.border,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('${i + 1}. ${labels[i]}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: i == _step ? FontWeight.w700 : FontWeight.w500,
+                            color: i <= _step ? FbColors.primary : FbColors.textMuted,
+                          )),
+                    ],
                   ),
                 ),
             ],
@@ -220,31 +248,57 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
   }
 
   Widget _customerCard() => SectionCard(
-        child: Row(
+        child: Column(
           children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: FbColors.primaryLight,
-              child: Text(_customer!.name[0], style: const TextStyle(fontSize: 20, color: FbColors.primary)),
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 26,
+                  backgroundColor: FbColors.primaryLight,
+                  child: Text(_customer!.name[0],
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: FbColors.primary)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_customer!.name,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: FbColors.primary)),
+                      Text('${_customer!.id} • ${_customer!.mobileMasked}',
+                          style: const TextStyle(color: FbColors.textMuted)),
+                    ],
+                  ),
+                ),
+                StatusChip(_customer!.kycStatus),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_customer!.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                  Text('${_customer!.id} • ${_customer!.mobileMasked}', style: const TextStyle(color: FbColors.textMuted)),
-                  if (_account != null) Text('${_account!.productName} ${_account!.masked}'),
-                ],
+            if (_account != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: FbColors.primaryLight, borderRadius: BorderRadius.circular(12)),
+                child: Row(children: [
+                  const Icon(Icons.account_balance_wallet_outlined, color: FbColors.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(_isDeposit ? 'DEPOSIT TO' : 'WITHDRAW FROM',
+                          style: const TextStyle(fontSize: 11, letterSpacing: 0.8, color: FbColors.textMuted)),
+                      Text(_account!.productName,
+                          style: const TextStyle(fontWeight: FontWeight.w700, color: FbColors.primary)),
+                    ]),
+                  ),
+                  Text(_account!.masked, style: const TextStyle(color: FbColors.textMuted)),
+                ]),
               ),
-            ),
-            StatusChip(_customer!.kycStatus),
+            ],
           ],
         ),
       );
 
   List<Widget> _stepCustomer() => [
-        const Text('Find the customer and check their photo and citizenship card before continuing.'),
+        const Text('Search for the customer.'),
         const SizedBox(height: 16),
         FilledButton.icon(onPressed: _pickCustomer, icon: const Icon(Icons.person_search), label: const Text('Search customer')),
         const SizedBox(height: 12),
@@ -256,7 +310,7 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
     return [
       _customerCard(),
       const SizedBox(height: 16),
-      if (!c.verified) const MessageBox('KYC is not verified for this customer, so cash transactions are blocked.'),
+      if (!c.verified) const MessageBox('KYC not verified yet. Cash transactions are not allowed.'),
       const Text('Choose the account', style: TextStyle(fontWeight: FontWeight.w700)),
       const SizedBox(height: 8),
       for (final a in c.accounts)
@@ -286,42 +340,135 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
       SectionCard(
         child: Column(
           children: [
-            Text(_isDeposit ? 'CASH-IN DEPOSIT' : 'CASH-OUT WITHDRAWAL',
-                style: const TextStyle(fontSize: 12, letterSpacing: 1, color: FbColors.textMuted)),
-            const SizedBox(height: 4),
-            Text(formatNpr(_amount),
-                style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: FbColors.primary)),
-            const SizedBox(height: 6),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              const Text('TYPE', style: TextStyle(fontSize: 12, letterSpacing: 1, color: FbColors.textMuted)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _isDeposit ? FbColors.successBg : FbColors.dangerBg,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(_isDeposit ? 'CASH IN' : 'CASH OUT',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: _isDeposit ? FbColors.accentDark : FbColors.danger)),
+              ),
+            ]),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(formatNpr(_amount).replaceAll('.00', ''),
+                        style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w800, color: FbColors.primary)),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(color: FbColors.primaryLight, borderRadius: BorderRadius.circular(6)),
+                  child: const Text('NPR',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: FbColors.textMuted)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             // Amount in words lets agent and customer check for keying errors (FR-6).
-            Text(_amount > 0 ? amountInWords(_amount) : 'Enter the amount',
-                textAlign: TextAlign.center, style: const TextStyle(color: FbColors.success, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
-            Text('Min ${formatNpr(AppConfig.minAmount)} • Max ${formatNpr(AppConfig.maxAmount)} per transaction',
-                style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(color: FbColors.primaryLight, borderRadius: BorderRadius.circular(20)),
+              child: Text(_amount > 0 ? amountInWords(_amount) : 'Enter the amount',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: FbColors.accentDark, fontWeight: FontWeight.w600)),
+            ),
+            const SizedBox(height: 8),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              const Icon(Icons.info_outline, size: 14, color: FbColors.textMuted),
+              const SizedBox(width: 4),
+              Text('Min ${formatNpr(AppConfig.minAmount)} • Max ${formatNpr(AppConfig.maxAmount)}',
+                  style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
+            ]),
             if (_amountError != null) ...[const SizedBox(height: 8), MessageBox(_amountError!)],
           ],
         ),
       ),
-      const SizedBox(height: 8),
-      Wrap(
-        spacing: 8,
+      const SizedBox(height: 14),
+      const Text('QUICK ADD', style: TextStyle(fontSize: 12, letterSpacing: 1, color: FbColors.textMuted)),
+      const SizedBox(height: 6),
+      Row(
         children: [
           for (final v in [1000, 2000, 5000, 10000])
-            ActionChip(
-              label: Text('+${formatNpr(v).replaceAll('.00', '')}'),
-              onPressed: () => setState(() => _digits = (_amount + v).toInt().toString()),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: Material(
+                  color: FbColors.primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => setState(() => _digits = (_amount + v).toInt().toString()),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('+${formatNpr(v).replaceAll('.00', '')}',
+                              style: const TextStyle(fontWeight: FontWeight.w700, color: FbColors.primary)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
         ],
       ),
-      const SizedBox(height: 8),
+      const SizedBox(height: 14),
       SectionCard(
-        title: 'Fees',
         child: Column(children: [
+          Row(children: const [
+            Icon(Icons.receipt_long_outlined, size: 18, color: FbColors.primary),
+            SizedBox(width: 6),
+            Text('Fees', style: TextStyle(fontWeight: FontWeight.w700, color: FbColors.primary)),
+          ]),
+          const SizedBox(height: 8),
           InfoRow(_isDeposit ? 'Deposit amount' : 'Cash to hand over', formatNpr(_amount)),
-          InfoRow('Service fee', _fee == 0 ? 'Rs. 0.00 (free)' : formatNpr(_fee)),
+          InfoRow('Service fee', _fee == 0 ? 'Free' : formatNpr(_fee)),
           const Divider(),
-          InfoRow(_isDeposit ? 'Credited to account' : 'Debited from account', formatNpr(_total), bold: true),
-          if (floatAfter != null) InfoRow('Your cash drawer after', formatNpr(floatAfter)),
+          InfoRow(_isDeposit ? 'Total credited' : 'Total debited', formatNpr(_total), bold: true),
+          if (floatAfter != null && _floatCash != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: FbColors.primary, borderRadius: BorderRadius.circular(12)),
+              child: Row(children: [
+                const Icon(Icons.point_of_sale, color: FbColors.accent),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('CASH IN HAND',
+                        style: TextStyle(fontSize: 11, letterSpacing: 0.8, color: Colors.white70)),
+                    const SizedBox(height: 2),
+                    Text.rich(TextSpan(children: [
+                      TextSpan(
+                          text: formatNpr(_floatCash!),
+                          style: const TextStyle(
+                              color: Colors.white60, decoration: TextDecoration.lineThrough)),
+                      const TextSpan(text: '  →  ', style: TextStyle(color: Colors.white)),
+                      TextSpan(
+                          text: formatNpr(floatAfter),
+                          style: const TextStyle(color: FbColors.accent, fontWeight: FontWeight.w700)),
+                    ])),
+                  ]),
+                ),
+              ]),
+            ),
+          ],
         ]),
       ),
       const SizedBox(height: 12),
@@ -340,7 +487,7 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
   }
 
   List<Widget> _stepReview() => [
-        const MessageBox('Read the details aloud to the customer and ask them to confirm.', error: false),
+        const MessageBox('Confirm the details with the customer.', error: false),
         const SizedBox(height: 12),
         SectionCard(
           title: 'Review',
@@ -360,15 +507,13 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
         ),
         const SizedBox(height: 12),
         if (!_isDeposit)
-          const Text('Next, the customer receives an OTP by SMS. Hand over cash only after the app shows “Confirmed”.',
-              style: TextStyle(color: FbColors.textMuted)),
+          const Text('The customer will get an OTP by SMS.', style: TextStyle(color: FbColors.textMuted)),
         if (_isDeposit)
-          const Text('Count the cash before confirming. The deposit is recorded immediately.',
-              style: TextStyle(color: FbColors.textMuted)),
+          const Text('Count the cash before you confirm.', style: TextStyle(color: FbColors.textMuted)),
         const SizedBox(height: 12),
         if (_error != null) ...[
           MessageBox(_outcomeUnknown
-              ? '$_error\nPressing Retry is safe: it cannot create a second transaction.'
+              ? '$_error\nRetry is safe: it won’t create a second transaction.'
               : _error!),
           const SizedBox(height: 12),
         ],

@@ -40,12 +40,21 @@ class _LoginScreenState extends State<LoginScreen> {
       await context.read<Session>().login(_agentId.text.trim(), _pin.text, _terminal);
     } on ApiException catch (e) {
       final left = e.details?['attemptsRemaining'];
-      setState(() => _error = left != null ? '${e.message}. $left attempt(s) left before the account locks.' : e.message);
+      setState(() => _error = left != null ? '${e.message}. $left ${left == 1 ? 'try' : 'tries'} left.' : e.message);
       _pin.clear();
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  void _forgotPin() => showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Forgot PIN'),
+          content: const Text('Ask your supervisor to reset your PIN.'),
+          actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -63,66 +72,98 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 12),
-                      const Icon(Icons.account_balance, size: 56, color: FbColors.primary),
                       const SizedBox(height: 8),
-                      const Text('FinBridge',
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: FbColors.surface,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: FbColors.border),
+                          ),
+                          child: const FbLogo(),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text('Agent login',
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: FbColors.primary)),
-                      const Text('Banking Without Boundaries',
+                      const SizedBox(height: 4),
+                      const Text('Log in to your FinBridge counter',
                           textAlign: TextAlign.center, style: TextStyle(color: FbColors.textMuted)),
-                      const Text('Authorised agent login',
-                          textAlign: TextAlign.center, style: TextStyle(color: FbColors.textMuted, fontSize: 12)),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       if (reason != null) ...[MessageBox(reason), const SizedBox(height: 12)],
-                      DropdownButtonFormField<String>(
-                        value: _terminal,
-                        decoration: const InputDecoration(labelText: 'Assigned terminal'),
-                        items: const [
-                          DropdownMenuItem(value: 'KTM-WARD-32', child: Text('Koteshwor Point, Ward 32')),
-                          DropdownMenuItem(value: 'KAV-DHU-01', child: Text('Dhulikhel Bazaar')),
-                        ],
-                        onChanged: (v) => setState(() => _terminal = v ?? _terminal),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _agentId,
-                        textCapitalization: TextCapitalization.characters,
-                        decoration: const InputDecoration(labelText: 'Agent ID', hintText: 'e.g. AGT-98412'),
-                        validator: (v) => (v == null || v.trim().length < 3) ? 'Enter your agent ID' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _pin,
-                        obscureText: !_showPin,
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
-                        decoration: InputDecoration(
-                          labelText: '6-digit PIN',
-                          counterText: '',
-                          suffixIcon: IconButton(
-                            tooltip: _showPin ? 'Hide PIN' : 'Show PIN',
-                            icon: Icon(_showPin ? Icons.visibility_off : Icons.visibility),
-                            onPressed: () => setState(() => _showPin = !_showPin),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const FieldLabel('Terminal', icon: Icons.storefront_outlined),
+                              DropdownButtonFormField<String>(
+                                value: _terminal,
+                                items: const [
+                                  DropdownMenuItem(value: 'KTM-WARD-32', child: Text('Koteshwor Point, Ward 32')),
+                                  DropdownMenuItem(value: 'KAV-DHU-01', child: Text('Dhulikhel Bazaar')),
+                                ],
+                                onChanged: (v) => setState(() => _terminal = v ?? _terminal),
+                              ),
+                              const SizedBox(height: 14),
+                              const FieldLabel('Agent ID', icon: Icons.badge_outlined),
+                              TextFormField(
+                                controller: _agentId,
+                                textCapitalization: TextCapitalization.characters,
+                                decoration: const InputDecoration(hintText: 'e.g. AGT-98412'),
+                                validator: (v) => (v == null || v.trim().length < 3) ? 'Enter your agent ID' : null,
+                              ),
+                              const SizedBox(height: 14),
+                              FieldLabel(
+                                'PIN',
+                                icon: Icons.pin_outlined,
+                                trailing: InkWell(
+                                  onTap: _forgotPin,
+                                  child: const Text('Forgot PIN?',
+                                      style: TextStyle(
+                                          fontSize: 13, fontWeight: FontWeight.w600, color: FbColors.primary)),
+                                ),
+                              ),
+                              TextFormField(
+                                controller: _pin,
+                                obscureText: !_showPin,
+                                keyboardType: TextInputType.number,
+                                maxLength: 6,
+                                decoration: InputDecoration(
+                                  hintText: '6 digits',
+                                  counterText: '',
+                                  suffixIcon: IconButton(
+                                    tooltip: _showPin ? 'Hide PIN' : 'Show PIN',
+                                    icon: Icon(_showPin ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                                    onPressed: () => setState(() => _showPin = !_showPin),
+                                  ),
+                                ),
+                                validator: (v) => RegExp(r'^\d{6}$').hasMatch(v ?? '') ? null : 'PIN must be 6 digits',
+                                onFieldSubmitted: (_) => _submit(),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text('Never share your PIN or a customer’s OTP.',
+                                  style: TextStyle(fontSize: 12, color: FbColors.textMuted)),
+                              const SizedBox(height: 16),
+                              if (_error != null) ...[MessageBox(_error!), const SizedBox(height: 12)],
+                              FilledButton.icon(
+                                onPressed: _busy ? null : _submit,
+                                icon: _busy
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Icon(Icons.lock_outline),
+                                label: Text(_busy ? 'Checking…' : 'Log in'),
+                              ),
+                            ],
                           ),
                         ),
-                        validator: (v) => RegExp(r'^\d{6}$').hasMatch(v ?? '') ? null : 'PIN must be 6 digits',
-                        onFieldSubmitted: (_) => _submit(),
                       ),
-                      const SizedBox(height: 4),
-                      const Text('Never share your PIN or a customer’s OTP with anyone.',
-                          style: TextStyle(fontSize: 12, color: FbColors.textMuted)),
-                      const SizedBox(height: 16),
-                      if (_error != null) ...[MessageBox(_error!), const SizedBox(height: 12)],
-                      FilledButton.icon(
-                        onPressed: _busy ? null : _submit,
-                        icon: _busy
-                            ? const SizedBox(
-                                width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.lock_outline),
-                        label: Text(_busy ? 'Checking…' : 'Secure agent login'),
-                      ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       const Text('Demo login: AGT-98412 / PIN 123456',
                           textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: FbColors.textMuted)),
                     ],

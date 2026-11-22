@@ -145,7 +145,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     ]),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Ask the customer for the 6-digit OTP sent to their registered mobile.',
+                  const Text('Ask the customer for the 6-digit OTP sent to their mobile.',
                       style: TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
                   Text(_left == Duration.zero ? 'OTP expired' : 'Expires in $mm:$ss',
@@ -155,7 +155,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(color: FbColors.warningBg, borderRadius: BorderRadius.circular(8)),
-                      child: Text('Demo only (no real SMS): OTP is $_devOtp',
+                      child: Text('Demo OTP: $_devOtp',
                           style: const TextStyle(color: FbColors.warning, fontWeight: FontWeight.w600)),
                     ),
                   ],
@@ -198,7 +198,7 @@ class _OtpScreenState extends State<OtpScreen> {
                   ] else
                     FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Back to counter')),
                   const SizedBox(height: 16),
-                  const Text('Do not hand over any cash until the next screen says “Confirmed”.',
+                  const Text('Give cash only after you see “Confirmed”.',
                       style: TextStyle(color: FbColors.danger, fontWeight: FontWeight.w600)),
                 ],
               ),

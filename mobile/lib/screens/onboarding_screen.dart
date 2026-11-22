@@ -276,7 +276,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         builder: (ctx) => AlertDialog(
           title: const Text('Application submitted'),
           content: Text('Customer ID: ${res['customerId']}\nAccount: ${res['accountMasked']}\n\n'
-              'The bank will review the KYC. Deposits and withdrawals become available once it is verified.'),
+              'The bank will check the details. Cash transactions work after approval.'),
           actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
         ),
       );
@@ -428,7 +428,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionCard(
-            title: 'Section A: Personal information',
+            title: 'Personal details',
             child: Column(children: [
               _field(_first, _m('First name', 'पहिलो नाम'), validator: _name),
               _field(_middle, bi('Middle name (optional)', 'बीचको नाम')),
@@ -460,10 +460,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   onChanged: (v) => setState(() => _marital = v!),
                 ),
               ),
-              _dateField(_dobBs, _m('Date of birth, BS', 'जन्म मिति (वि.सं.)'), _pickDobBs, validator: _dobValidator),
-              _dateField(_dobAdText, _m('Date of birth, AD', 'जन्म मिति (ई.सं.)'), _pickDobAd,
-                  validator: _dobValidator,
-                  helper: _dobAd == null ? 'Choosing either date fills the other' : 'Age ${_age ?? '-'}'),
+              _dateField(_dobBs, _m('Date of birth, BS', 'जन्म मिति वि.सं.'), _pickDobBs, validator: _dobValidator),
+              _dateField(_dobAdText, _m('Date of birth, AD', 'जन्म मिति ई.सं.'), _pickDobAd,
+                  validator: _dobValidator, helper: _dobAd == null ? null : 'Age ${_age ?? '-'}'),
               if (_useOccupationList)
                 _placeMenu(
                   key: const ValueKey('occupation'),
@@ -486,14 +485,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: 12),
           SectionCard(
-            title: 'Section B: Citizenship and PAN',
+            title: 'Citizenship',
             child: Column(children: [
               _field(_citizenship, _m('Citizenship certificate no.', 'नागरिकता नं.'),
                   hint: '27-01-78-04912',
                   validator: (v) => RegExp(r'^\d{1,3}(-\d{1,6}){1,4}$').hasMatch(v?.trim() ?? '')
                       ? null
                       : 'Use the format printed on the certificate'),
-              _dateField(_issueBs, _m('Issue date, BS', 'जारी मिति (वि.सं.)'), _pickIssueDate,
+              _dateField(_issueBs, _m('Issue date, BS', 'जारी मिति वि.सं.'), _pickIssueDate,
                   validator: _issueDateValidator),
               if (_useLists)
                 _placeMenu(
@@ -513,8 +512,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   keyboard: TextInputType.number,
                   maxLength: 9,
                   validator: (v) => (v == null || v.isEmpty || RegExp(r'^\d{9}$').hasMatch(v)) ? null : 'PAN has 9 digits'),
-              const Text('The format check does not verify the document with any government system.',
-                  style: TextStyle(fontSize: 12, color: FbColors.textMuted)),
             ]),
           ),
         ],
@@ -652,7 +649,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             title: 'Documents',
             child: Column(children: [
               const Text(
-                'Camera capture is simulated in this prototype: tick each item once you have checked the original.',
+                'Tick each document after checking the original.',
                 style: TextStyle(fontSize: 12, color: FbColors.textMuted),
               ),
               CheckboxListTile(
@@ -678,7 +675,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               contentPadding: EdgeInsets.zero,
               value: _consent,
               onChanged: (v) => setState(() => _consent = v!),
-              title: const Text('The customer has read (or heard) the account terms and agrees to them. *'),
+              title: const Text('Customer agrees to the account terms. *'),
             ),
           ),
         ],

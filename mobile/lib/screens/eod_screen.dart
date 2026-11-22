@@ -105,8 +105,9 @@ class _EodScreenState extends State<EodScreen> {
                       ),
                       if ((p['pending'] as List).isNotEmpty) ...[
                         const SizedBox(height: 12),
-                        MessageBox('${(p['pending'] as List).length} withdrawal(s) still waiting for an OTP. '
-                            'No cash should have been paid out for them.'),
+                        MessageBox((p['pending'] as List).length == 1
+                            ? '1 withdrawal is waiting for OTP. Don’t pay cash for it.'
+                            : '${(p['pending'] as List).length} withdrawals are waiting for OTP. Don’t pay cash for them.'),
                       ],
                       const SizedBox(height: 12),
                       if (_result == null) ...[

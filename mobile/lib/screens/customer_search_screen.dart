@@ -93,7 +93,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
               for (final a in c.accounts) InfoRow(a.productName, '${a.masked} (${a.status})'),
               const SizedBox(height: 12),
               if (!c.verified)
-                const MessageBox('This customer’s KYC is not verified yet, so cash transactions are not allowed.')
+                const MessageBox('KYC not verified yet. Cash transactions are not allowed.')
               else ...[
                 FilledButton.icon(
                   icon: const Icon(Icons.south_west),
@@ -179,8 +179,8 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                       padding: const EdgeInsets.all(24),
                       child: Text(
                         _searched
-                            ? 'No customer found. Check the number, or register them as a new customer.'
-                            : 'Search by the customer’s 10-digit mobile number, account number, citizenship number or name.',
+                            ? 'No customer found.'
+                            : 'Search by mobile, account, citizenship no. or name.',
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: FbColors.textMuted),
                       ),
