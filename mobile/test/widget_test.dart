@@ -1,30 +1,26 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:finbridge_agent/api/money.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:finbridge_agent/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  test('rupees and paisa convert without rounding errors', () {
+    expect(rupeesToPaisa(0.1 + 0.2), 30);
+    expect(rupeesToPaisa(25000), 2500000);
+    expect(paisaToRupees(1050), 10.5);
+    expect(hasTwoDecimals(10.25), isTrue);
+    expect(hasTwoDecimals(10.255), isFalse);
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  test('amounts use Nepali digit grouping', () {
+    expect(formatNpr(0), 'Rs. 0.00');
+    expect(formatNpr(12345), 'Rs. 123.45');
+    expect(formatNpr(10000000), 'Rs. 1,00,000.00');
+    expect(formatNpr(1234567890), 'Rs. 1,23,45,678.90');
+    expect(formatNpr(-50000), '-Rs. 500.00');
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  test('amounts in words use lakh and crore', () {
+    expect(amountInWords(250000), 'Two Thousand Five Hundred Nepalese Rupees Only');
+    expect(amountInWords(15000050), 'One Lakh Fifty Thousand Nepalese Rupees and Fifty Paisa Only');
+    expect(amountInWords(1000000000), 'One Crore Nepalese Rupees Only');
   });
 }

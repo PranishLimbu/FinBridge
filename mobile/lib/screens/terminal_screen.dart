@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
-import '../config.dart';
+import '../firebase_options.dart';
 import '../state/session.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -32,7 +32,7 @@ class TerminalScreen extends StatelessWidget {
                     InfoRow('Location', a.location),
                     InfoRow('Terminal', a.terminalId ?? '-'),
                     InfoRow('Partner bank', a.partnerBank),
-                    InfoRow('Server', AppConfig.apiUrl),
+                    InfoRow('Firebase project', DefaultFirebaseOptions.currentPlatform.projectId),
                   ]),
                 ),
                 const SizedBox(height: 12),

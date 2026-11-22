@@ -1,11 +1,210 @@
 rules_version = '2';
-// The Flutter app never talks to Firestore directly: all reads and writes go through the
-// FinBridge API, which uses the Admin SDK and enforces every rule itself. So direct
-// client access is denied completely.
+// FinBridge security rules. The Flutter app talks to Firestore directly, so these rules are
+// the server-side guard: they decide who may read what, and check every money movement.
+//
+// Who is who: agents sign in with Firebase Authentication. Their Auth UID is their agent ID
+// (e.g. AGT-98412) and a custom claim `role` is 'agent' or 'supervisor'
+// (set by backend/scripts/firebase-setup.js).
+//
+// Money: amounts are integer paisa. A deposit or confirmed withdrawal is one Firestore
+// transaction that writes the transaction record, the account balance and the agent's cash
+// drawer together. The balance and drawer updates carry `lastTxnId`, and the rules check that
+// they change by exactly that transaction's amount, so no balance can be edited on its own.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+
+    // ---------------------------------------------------------------- helpers
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function isAgent() { return signedIn() && request.auth.token.role == 'agent'; }
+    function isSupervisor() { return signedIn() && request.auth.token.role == 'supervisor'; }
+    function path(collection, id) { return /databases/$(database)/documents/$(collection)/$(id); }
+    function activeAgent() { return isAgent() && get(path('agents', me())).data.status == 'active'; }
+    function incoming() { return request.resource.data; }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    function MIN_TXN() { return 10000; }        // Rs 100
+    function MAX_TXN() { return 2500000; }      // Rs 25,000
+    function WITHDRAWAL_FEE() { return 1000; }  // Rs 10
+
+    // True when transaction `id` becomes confirmed in this very write (and was not before),
+    // so the same transaction can never be applied to a balance twice.
+    function newlyConfirmed(id) {
+      return getAfter(path('transactions', id)).data.status == 'confirmed'
+        && (!exists(path('transactions', id)) || get(path('transactions', id)).data.status == 'awaiting_otp');
     }
+    // The signed change a transaction makes to the customer's account.
+    function accountDelta(t) { return t.type == 'deposit' ? t.total : -t.total; }
+    // The change it makes to the agent's cash drawer.
+    function cashDelta(t) { return t.type == 'deposit' ? t.amount : -t.amount; }
+
+    // ---------------------------------------------------------------- reference data
+    match /provinces/{id} { allow read: if signedIn(); }
+    match /districts/{id} { allow read: if signedIn(); }
+    match /localBodies/{id} { allow read: if signedIn(); }
+
+    // ---------------------------------------------------------------- agents
+    match /agents/{agentId} {
+      allow read: if signedIn() && (me() == agentId || isSupervisor());
+
+      // Anyone may record their own login.
+      allow update: if signedIn() && me() == agentId
+        && changed().hasOnly(['lastLoginAt', 'lastTerminalId']);
+
+      // An agent's drawer moves only together with a confirmed transaction of the same amount.
+      allow update: if activeAgent() && me() == agentId
+        && changed().hasOnly(['float', 'floatDate', 'lastTxnId'])
+        && drawerUpdateOk();
+
+      // Supervisors unlock agents and apply approved float rebalances.
+      allow update: if isSupervisor()
+        && changed().hasOnly(['status', 'failedPinAttempts', 'unlockedBy', 'unlockedAt', 'float', 'floatDate'])
+        && (!('float' in changed()) || (
+          incoming().float.limit == resource.data.float.limit
+          && incoming().float.minReserve == resource.data.float.minReserve
+          && incoming().float.cash >= 0 && incoming().float.cash <= incoming().float.limit));
+
+      function drawerUpdateOk() {
+        let before = resource.data.float;
+        let after = incoming().float;
+        let t = getAfter(path('transactions', incoming().lastTxnId)).data;
+        return after.limit == before.limit && after.minReserve == before.minReserve
+          // the opening float may only be reset when a new day starts
+          && (after.opening == before.opening || incoming().floatDate != resource.data.floatDate)
+          && 'lastTxnId' in changed()
+          && t.agentId == me()
+          && newlyConfirmed(incoming().lastTxnId)
+          && after.cash == before.cash + cashDelta(t)
+          && after.cash <= after.limit
+          && (t.type == 'deposit' || after.cash >= after.minReserve);
+      }
+    }
+
+    // ---------------------------------------------------------------- customers and accounts
+    match /customers/{customerId} {
+      allow read: if signedIn();
+
+      // Agents onboard new customers; they always start waiting for KYC review.
+      allow create: if activeAgent()
+        && incoming().createdByAgent == me()
+        && incoming().kycStatus == 'pending_review'
+        && incoming().mobile is string && incoming().mobile.matches('9[78][0-9]{8}')
+        && incoming().citizenshipNo is string;
+
+      // Only a supervisor decides KYC, once.
+      allow update: if isSupervisor()
+        && resource.data.kycStatus == 'pending_review'
+        && changed().hasOnly(['kycStatus', 'kycReviewedBy', 'kycReviewedAt', 'kycRejectReason'])
+        && incoming().kycStatus in ['verified', 'rejected']
+        && incoming().kycReviewedBy == me();
+    }
+
+    match /accounts/{accountNo} {
+      allow read: if signedIn();
+
+      // A new account is created with its customer, empty and pending.
+      allow create: if activeAgent()
+        && incoming().balance == 0
+        && incoming().status == 'pending'
+        && getAfter(path('customers', incoming().customerId)).data.createdByAgent == me()
+        && getAfter(path('customers', incoming().customerId)).data.kycStatus == 'pending_review';
+
+      // The balance moves only by a transaction confirmed in the same write.
+      allow update: if activeAgent()
+        && resource.data.status == 'active'
+        && changed().hasOnly(['balance', 'lastTxnId'])
+        && balanceUpdateOk(accountNo);
+
+      // A supervisor activates the account when KYC is approved.
+      allow update: if isSupervisor()
+        && changed().hasOnly(['status'])
+        && incoming().status == 'active'
+        && getAfter(path('customers', resource.data.customerId)).data.kycStatus == 'verified';
+
+      function balanceUpdateOk(accountNo) {
+        let t = getAfter(path('transactions', incoming().lastTxnId)).data;
+        return t.accountNo == accountNo
+          && t.agentId == me()
+          && newlyConfirmed(incoming().lastTxnId)
+          && incoming().balance == resource.data.balance + accountDelta(t)
+          && incoming().balance >= 0;
+      }
+    }
+
+    // ---------------------------------------------------------------- cash transactions
+    match /transactions/{txnId} {
+      allow read: if signedIn() && (resource.data.agentId == me() || isSupervisor());
+
+      allow create: if activeAgent()
+        && incoming().agentId == me()
+        && incoming().amount is int
+        && incoming().amount >= MIN_TXN() && incoming().amount <= MAX_TXN()
+        && get(path('accounts', incoming().accountNo)).data.customerId == incoming().customerId
+        && get(path('accounts', incoming().accountNo)).data.status == 'active'
+        && (
+          // A deposit is confirmed at once, together with the balance and drawer updates.
+          (incoming().type == 'deposit' && incoming().status == 'confirmed'
+            && incoming().fee == 0 && incoming().total == incoming().amount
+            && movedTogether(txnId))
+          ||
+          // A withdrawal waits for the customer's OTP; nothing moves yet.
+          (incoming().type == 'withdrawal' && incoming().status == 'awaiting_otp'
+            && incoming().fee == WITHDRAWAL_FEE() && incoming().total == incoming().amount + WITHDRAWAL_FEE())
+        );
+
+      // The agent can record OTP attempts, cancel, fail, or confirm (with the money moves).
+      allow update: if activeAgent()
+        && resource.data.agentId == me()
+        && resource.data.status == 'awaiting_otp'
+        && changed().hasOnly(['status', 'otp', 'confirmedAt', 'floatBefore', 'floatAfter', 'failureReason'])
+        && (
+          incoming().status in ['awaiting_otp', 'cancelled', 'failed']
+          || (incoming().status == 'confirmed' && movedTogether(txnId))
+        );
+
+      // The account and the agent's drawer point at this transaction in the same write.
+      function movedTogether(txnId) {
+        return getAfter(path('accounts', incoming().accountNo)).data.lastTxnId == txnId
+          && getAfter(path('agents', me())).data.lastTxnId == txnId;
+      }
+    }
+
+    // A retry with the same key finds the first attempt instead of paying twice.
+    match /idempotency/{key} {
+      allow read: if signedIn() && key.matches(me() + ':.*');
+      allow create: if isAgent() && key.matches(me() + ':.*');
+    }
+
+    // ---------------------------------------------------------------- reports and requests
+    match /eodReports/{reportId} {
+      allow read: if signedIn() && (resource.data.agentId == me() || isSupervisor());
+      allow create: if isAgent() && incoming().agentId == me() && reportId.matches(me() + '_.*');
+    }
+
+    match /floatRequests/{requestId} {
+      allow read: if signedIn() && (resource.data.agentId == me() || isSupervisor());
+      allow create: if isAgent() && incoming().agentId == me() && incoming().status == 'pending';
+      allow update: if isSupervisor() && resource.data.status == 'pending'
+        && changed().hasOnly(['status', 'decidedBy', 'decidedAt'])
+        && incoming().status in ['approved', 'rejected'];
+    }
+
+    match /disputes/{disputeId} {
+      allow read: if signedIn() && (resource.data.agentId == me() || isSupervisor());
+      allow create: if isAgent() && incoming().agentId == me() && incoming().status == 'open';
+    }
+
+    // ---------------------------------------------------------------- logs (append-only)
+    match /auditLogs/{id} {
+      allow read: if isSupervisor();
+      allow create: if signedIn() && incoming().actorId == me();
+    }
+
+    match /smsOutbox/{id} {
+      allow read: if isSupervisor();
+      allow create: if signedIn();
+    }
+
+    // Anything not listed above is closed.
   }
 }

@@ -107,7 +107,8 @@ async function getLocations() {
       };
     })();
     cache.set(store, load);
-    load.catch(() => cache.delete(store));
+    // Do not keep a failed or empty load: the lists may be imported while the server runs.
+    load.then((l) => { if (!l.localBodies.length) cache.delete(store); }, () => cache.delete(store));
   }
   return cache.get(store);
 }

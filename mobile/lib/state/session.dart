@@ -6,8 +6,8 @@ import '../api/api_client.dart';
 import '../api/models.dart';
 import '../config.dart';
 
-/// Holds the logged-in agent and the API client. The token lives only in memory, so
-/// closing the app always requires a fresh login, and the PIN is never stored.
+/// Holds the logged-in agent and the API client (which talks to Firebase). Logging out signs
+/// out of Firebase too, and the PIN is never stored.
 class Session extends ChangeNotifier {
   Session() {
     api.onUnauthorised = () => logout(reason: 'Your session has expired. Please log in again.');
@@ -47,7 +47,9 @@ class Session extends ChangeNotifier {
       } catch (_) {/* logging out locally is enough */}
     }
     _idle?.cancel();
-    api.token = null;
+    try {
+      await api.signOut();
+    } catch (_) {/* already signed out */}
     agent = null;
     logoutReason = reason;
     notifyListeners();

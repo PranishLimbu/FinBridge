@@ -9,13 +9,32 @@ journal and end-of-day cash reconciliation.
 
 ```
 finbridge/
-├── backend/   Node.js + Express API, SQLite (or Cloud Firestore, or an in-memory demo database)
-└── mobile/    Flutter agent app (Android first)
+├── backend/   Firebase setup scripts, Firestore security rules, and the older Node.js API
+└── mobile/    Flutter agent app (Android and web), talks straight to Firebase
 ```
 
-The app never talks to Firebase directly. Every request goes through the API, which checks
-amounts, limits, cash float and OTPs on the server and writes an audit log. Firestore security
-rules deny all direct client access.
+**The app talks to Firebase directly** (project `finbridge-df94f`). Agents sign in with Firebase
+Authentication, and the app reads and writes Cloud Firestore itself. Every phone shares the same
+data, with no server to host. The business rules (amount limits, cash float, OTP, KYC) run in
+`mobile/lib/api/api_client.dart`. `backend/firestore.rules` re-checks the parts that matter on
+Firebase's side: who may read or write what, and that a balance or cash drawer only changes
+together with a confirmed transaction of exactly that amount.
+
+### Set up Firebase (once, and again after flushing it)
+
+1. In the Firebase console: **Authentication → Get started → Sign-in method → Email/Password →
+   Enable**.
+2. Put the service-account key at `backend/serviceAccountKey.json` and run:
+   ```bash
+   cd backend
+   npm install
+   npm run firebase:setup             # rules + demo logins + demo data + address lists
+   npm run firebase:setup -- --reset  # DELETES all FinBridge data first, then the same
+   ```
+3. Run the app (section 3). No backend server is needed.
+
+Sections 1 and 2 describe the older Node.js API, which still works with SQLite or Firestore for
+local testing. The app no longer uses it.
 
 ---
 
@@ -96,30 +115,15 @@ Needs **Flutter 3.27 or newer** (`flutter --version`).
 
 ```bash
 cd mobile
-flutter create --platforms=android,ios --org com.finbridge .   # generates android/ and ios/ only
 flutter pub get
-flutter test                 # unit tests for formatting and amount-in-words
-flutter run
+flutter test                                 # unit tests for money formatting
+flutter run                                  # Android phone or emulator
+flutter run -d web-server --web-port 8080    # browser, http://localhost:8080
+flutter build apk                            # APK to install on any phone
 ```
 
-**Allow plain HTTP to your laptop (development only).** Android blocks `http://` by default.
-In `mobile/android/app/src/main/AndroidManifest.xml`, add to the `<application ...>` tag:
-
-```xml
-android:usesCleartextTraffic="true"
-```
-
-**Which address the app uses for the API:**
-
-| Running on | API address |
-|---|---|
-| Android emulator | `http://10.0.2.2:4000/api` (default, nothing to change) |
-| Real phone on the same Wi-Fi | `flutter run --dart-define=API_URL=http://<laptop IP>:4000/api` |
-| Browser (`flutter run -d web-server --web-port 8080`) | `http://localhost:4000/api` (default, nothing to change) |
-| iOS simulator | `flutter run --dart-define=API_URL=http://localhost:4000/api` |
-
-Find your laptop's IP with `ipconfig` (Windows) or `ifconfig` / `ip a` (macOS/Linux), and allow
-port 4000 through the firewall.
+The Firebase settings are in `mobile/lib/firebase_options.dart`, so there is no server address
+to set. Any phone with internet access, on any network, uses the same Firebase data.
 
 ## 4. Try the main flows
 
