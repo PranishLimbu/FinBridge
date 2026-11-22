@@ -13,6 +13,7 @@ dependencies:
   firebase_core: ^5.2.0
   flutter:
     sdk: flutter
+  nepali_utils: ^3.0.8
   provider: ^6.1.2
 
 dev_dependencies:

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:nepali_utils/nepali_utils.dart';
 import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../api/models.dart';
 import '../state/session.dart';
 import '../theme.dart';
+import '../utils/bs_date.dart';
+import '../widgets/bs_date_picker.dart';
 import '../widgets/common.dart';
 
 /// UC3 Onboard new customer (Figures 8–9): Personal → Family → Address → Documents.
@@ -28,7 +31,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _last = TextEditingController();
   String _gender = 'male';
   String _marital = 'single';
+  // Date of birth: the BS and AD fields are two views of one date and always stay in sync.
   final _dobBs = TextEditingController();
+  final _dobAdText = TextEditingController();
   DateTime? _dobAd;
   final _occupation = TextEditingController();
   final _mobile = TextEditingController();
@@ -120,7 +125,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void dispose() {
     for (final c in [
-      _first, _middle, _last, _dobBs, _occupation, _mobile, _citizenship, _issueBs, _issueDistrict, _pan,
+      _first, _middle, _last, _dobBs, _dobAdText, _occupation, _mobile, _citizenship, _issueBs, _issueDistrict, _pan,
       _father, _mother, _grandfather, _spouse, _district, _municipality, _ward, _tole,
     ]) {
       c.dispose();
@@ -131,8 +136,69 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String? _req(String? v) => (v == null || v.trim().isEmpty) ? 'Required' : null;
   String? _name(String? v) =>
       _req(v) ?? (RegExp(r"^[A-Za-z .'-]+$").hasMatch(v!.trim()) ? null : 'Use letters only');
-  String? _bsDate(String? v) =>
-      RegExp(r'^20\d{2}-\d{2}-\d{2}$').hasMatch(v?.trim() ?? '') ? null : 'Use BS format YYYY-MM-DD, e.g. 2042-05-14';
+  /// Label for a mandatory field: "First name (पहिलो नाम) *".
+  String _m(String en, String ne) => '${bi(en, ne)} *';
+
+  String? _dobValidator(String? _) {
+    if (_dobAd == null) return 'Choose the date of birth';
+    if ((_age ?? 0) < 16) return 'The customer must be at least 16 years old';
+    return null;
+  }
+
+  String? _issueDateValidator(String? v) {
+    final d = NepaliDateTime.tryParse(v ?? '');
+    if (v == null || v.isEmpty || d == null) return 'Choose the issue date';
+    final dob = _dobAd == null ? null : adToBs(_dobAd!);
+    if (dob != null && d.isBefore(dob)) return 'Cannot be before the date of birth';
+    if (d.isAfter(todayBs())) return 'Cannot be in the future';
+    return null;
+  }
+
+  /// Sets the date of birth and fills both the AD and the BS field.
+  void _setDob(DateTime ad) => setState(() {
+        _dobAd = DateTime(ad.year, ad.month, ad.day);
+        _dobAdText.text = _iso(_dobAd!);
+        _dobBs.text = formatBs(adToBs(_dobAd!));
+      });
+
+  Future<void> _pickDobBs() async {
+    final today = todayBs();
+    final d = await showBsDatePicker(
+      context: context,
+      initialDate: _dobAd == null ? NepaliDateTime(today.year - 30) : adToBs(_dobAd!),
+      firstDate: NepaliDateTime(1975),
+      lastDate: today,
+      title: 'Date of birth (BS)',
+    );
+    if (d != null) _setDob(bsToAd(d));
+  }
+
+  Future<void> _pickDobAd() async {
+    final today = DateTime.now();
+    final d = await showDatePicker(
+      context: context,
+      initialDate: _dobAd ?? DateTime(today.year - 30),
+      firstDate: DateTime(1918),
+      lastDate: today,
+      helpText: 'Date of birth (AD)',
+    );
+    if (d != null) _setDob(d);
+  }
+
+  Future<void> _pickIssueDate() async {
+    final today = todayBs();
+    final first = _dobAd == null ? NepaliDateTime(1975) : adToBs(_dobAd!);
+    var initial = NepaliDateTime.tryParse(_issueBs.text) ?? today;
+    if (initial.isBefore(first)) initial = first;
+    final d = await showBsDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: first,
+      lastDate: today,
+      title: 'Citizenship issue date (BS)',
+    );
+    if (d != null) setState(() => _issueBs.text = formatBs(d));
+  }
 
   int? get _age {
     if (_dobAd == null) return null;
@@ -142,26 +208,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return a;
   }
 
-  Future<void> _pickDob() async {
-    final d = await showDatePicker(
-      context: context,
-      initialDate: _dobAd ?? DateTime(1990),
-      firstDate: DateTime(1915),
-      lastDate: DateTime.now(),
-      helpText: 'Date of birth (AD)',
-    );
-    if (d != null) setState(() => _dobAd = d);
-  }
-
   void _next() {
-    if (_step == 0 && _dobAd == null) {
-      setState(() => _error = 'Choose the date of birth in AD as well');
-      return;
-    }
-    if (_step == 0 && (_age ?? 0) < 16) {
-      setState(() => _error = 'The customer must be at least 16 years old');
-      return;
-    }
     final listsOk = _listsValid();
     if (!_forms[_step].currentState!.validate() || !listsOk) return;
     setState(() {
@@ -277,6 +324,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 8),
+                    child: Text('Fields marked * are required.',
+                        style: TextStyle(fontSize: 12, color: FbColors.textMuted)),
+                  ),
                   Form(
                     key: _forms[_step],
                     child: switch (_step) {
@@ -349,20 +401,43 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
       );
 
+  /// A date field: tapping it (or the calendar icon) opens the date picker. Not typed by hand.
+  Widget _dateField(TextEditingController c, String label, VoidCallback onPick,
+          {String? Function(String?)? validator, String? helper}) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: TextFormField(
+          controller: c,
+          readOnly: true,
+          onTap: onPick,
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: 'Tap to choose',
+            helperText: helper,
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.calendar_month_outlined),
+              tooltip: 'Choose date',
+              onPressed: onPick,
+            ),
+          ),
+          validator: validator,
+        ),
+      );
+
   Widget _personal() => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionCard(
             title: 'Section A: Personal information',
             child: Column(children: [
-              _field(_first, bi('First name', 'पहिलो नाम'), validator: _name),
+              _field(_first, _m('First name', 'पहिलो नाम'), validator: _name),
               _field(_middle, bi('Middle name (optional)', 'बीचको नाम')),
-              _field(_last, bi('Last name', 'थर'), validator: _name),
+              _field(_last, _m('Last name', 'थर'), validator: _name),
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DropdownButtonFormField<String>(
                   value: _gender,
-                  decoration: InputDecoration(labelText: bi('Gender', 'लिङ्ग')),
+                  decoration: InputDecoration(labelText: _m('Gender', 'लिङ्ग')),
                   items: const [
                     DropdownMenuItem(value: 'male', child: Text('Male (पुरुष)')),
                     DropdownMenuItem(value: 'female', child: Text('Female (महिला)')),
@@ -375,7 +450,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DropdownButtonFormField<String>(
                   value: _marital,
-                  decoration: InputDecoration(labelText: bi('Marital status', 'वैवाहिक स्थिति')),
+                  decoration: InputDecoration(labelText: _m('Marital status', 'वैवाहिक स्थिति')),
                   items: const [
                     DropdownMenuItem(value: 'single', child: Text('Single (अविवाहित)')),
                     DropdownMenuItem(value: 'married', child: Text('Married (विवाहित)')),
@@ -385,21 +460,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   onChanged: (v) => setState(() => _marital = v!),
                 ),
               ),
-              _field(_dobBs, bi('Date of birth, BS', 'जन्म मिति'), hint: '2042-05-14', validator: _bsDate),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: OutlinedButton.icon(
-                  onPressed: _pickDob,
-                  icon: const Icon(Icons.calendar_today_outlined),
-                  label: Text(_dobAd == null
-                      ? 'Date of birth, AD (choose)'
-                      : 'AD: ${_iso(_dobAd!)}  •  Age ${_age ?? '-'}'),
-                ),
-              ),
+              _dateField(_dobBs, _m('Date of birth, BS', 'जन्म मिति (वि.सं.)'), _pickDobBs, validator: _dobValidator),
+              _dateField(_dobAdText, _m('Date of birth, AD', 'जन्म मिति (ई.सं.)'), _pickDobAd,
+                  validator: _dobValidator,
+                  helper: _dobAd == null ? 'Choosing either date fills the other' : 'Age ${_age ?? '-'}'),
               if (_useOccupationList)
                 _placeMenu(
                   key: const ValueKey('occupation'),
-                  label: bi('Occupation', 'पेशा'),
+                  label: _m('Occupation', 'पेशा'),
                   places: _occupations!,
                   selected: _occupationCode,
                   error: _occupationError,
@@ -409,8 +477,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   }),
                 )
               else
-                _field(_occupation, bi('Occupation', 'पेशा'), validator: _req, hint: 'e.g. Agriculture / Farmer'),
-              _field(_mobile, bi('Mobile number', 'मोबाइल नम्बर'),
+                _field(_occupation, _m('Occupation', 'पेशा'), validator: _req, hint: 'e.g. Agriculture / Farmer'),
+              _field(_mobile, _m('Mobile number', 'मोबाइल नम्बर'),
                   keyboard: TextInputType.phone,
                   maxLength: 10,
                   validator: (v) => RegExp(r'^9[78]\d{8}$').hasMatch(v ?? '') ? null : '10 digits starting 97 or 98'),
@@ -420,16 +488,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           SectionCard(
             title: 'Section B: Citizenship and PAN',
             child: Column(children: [
-              _field(_citizenship, bi('Citizenship certificate no.', 'नागरिकता नं.'),
+              _field(_citizenship, _m('Citizenship certificate no.', 'नागरिकता नं.'),
                   hint: '27-01-78-04912',
                   validator: (v) => RegExp(r'^\d{1,3}(-\d{1,6}){1,4}$').hasMatch(v?.trim() ?? '')
                       ? null
                       : 'Use the format printed on the certificate'),
-              _field(_issueBs, bi('Issue date, BS', 'जारी मिति'), hint: '2060-03-22', validator: _bsDate),
+              _dateField(_issueBs, _m('Issue date, BS', 'जारी मिति (वि.सं.)'), _pickIssueDate,
+                  validator: _issueDateValidator),
               if (_useLists)
                 _placeMenu(
                   key: const ValueKey('issue-district'),
-                  label: bi('Issue district', 'जारी जिल्ला'),
+                  label: _m('Issue district', 'जारी जिल्ला'),
                   places: _locs!.districts,
                   selected: _issueDistrictId,
                   error: _issueDistrictError,
@@ -439,7 +508,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   }),
                 )
               else
-                _field(_issueDistrict, bi('Issue district', 'जारी जिल्ला'), validator: _req),
+                _field(_issueDistrict, _m('Issue district', 'जारी जिल्ला'), validator: _req),
               _field(_pan, bi('PAN (optional)', 'स्थायी लेखा नं.'),
                   keyboard: TextInputType.number,
                   maxLength: 9,
@@ -454,10 +523,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _family() => SectionCard(
         title: 'Family details',
         child: Column(children: [
-          _field(_father, bi('Father’s name', 'बुबाको नाम'), validator: _name),
-          _field(_mother, bi('Mother’s name', 'आमाको नाम'), validator: _name),
-          _field(_grandfather, bi('Grandfather’s name', 'हजुरबुबाको नाम'), validator: _name),
-          if (_marital == 'married') _field(_spouse, bi('Spouse’s name', 'पति/पत्नीको नाम'), validator: _name),
+          _field(_father, _m('Father’s name', 'बुबाको नाम'), validator: _name),
+          _field(_mother, _m('Mother’s name', 'आमाको नाम'), validator: _name),
+          _field(_grandfather, _m('Grandfather’s name', 'हजुरबुबाको नाम'), validator: _name),
+          if (_marital == 'married') _field(_spouse, _m('Spouse’s name', 'पति/पत्नीको नाम'), validator: _name),
         ]),
       );
 
@@ -500,7 +569,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         title: 'Permanent address',
         child: Column(children: [
           if (_useLists) ..._addressLists() else ..._addressText(),
-          _field(_ward, bi('Ward no.', 'वडा नं.'),
+          _field(_ward, _m('Ward no.', 'वडा नं.'),
               keyboard: TextInputType.number,
               maxLength: 2,
               validator: (v) {
@@ -520,7 +589,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         padding: const EdgeInsets.only(bottom: 12),
         child: DropdownButtonFormField<String>(
           value: _provinceId,
-          decoration: InputDecoration(labelText: bi('Province', 'प्रदेश')),
+          decoration: InputDecoration(labelText: _m('Province', 'प्रदेश')),
           items: [
             for (final p in locs.provinces) DropdownMenuItem(value: p.id, child: Text('${p.name}  (${p.nameNe})')),
           ],
@@ -535,7 +604,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       // Keys include the parent so a child list starts empty whenever its parent changes.
       _placeMenu(
         key: ValueKey('district-$_provinceId'),
-        label: bi('District', 'जिल्ला'),
+        label: _m('District', 'जिल्ला'),
         places: districts,
         selected: _districtId,
         error: _districtError,
@@ -547,7 +616,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       _placeMenu(
         key: ValueKey('local-body-$_districtId'),
-        label: bi('Municipality / rural municipality', 'नगरपालिका / गाउँपालिका'),
+        label: _m('Municipality / rural municipality', 'नगरपालिका / गाउँपालिका'),
         places: bodies,
         selected: _localBodyId,
         error: _localBodyError,
@@ -567,13 +636,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           padding: const EdgeInsets.only(bottom: 12),
           child: DropdownButtonFormField<String>(
             value: _province,
-            decoration: InputDecoration(labelText: bi('Province', 'प्रदेश')),
+            decoration: InputDecoration(labelText: _m('Province', 'प्रदेश')),
             items: [for (final p in _provinces) DropdownMenuItem(value: p, child: Text(p))],
             onChanged: (v) => setState(() => _province = v!),
           ),
         ),
-        _field(_district, bi('District', 'जिल्ला'), validator: _req),
-        _field(_municipality, bi('Municipality / rural municipality', 'नगरपालिका / गाउँपालिका'), validator: _req),
+        _field(_district, _m('District', 'जिल्ला'), validator: _req),
+        _field(_municipality, _m('Municipality / rural municipality', 'नगरपालिका / गाउँपालिका'), validator: _req),
       ];
 
   Widget _documents() => Column(
@@ -589,17 +658,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               CheckboxListTile(
                 value: _front,
                 onChanged: (v) => setState(() => _front = v!),
-                title: const Text('Citizenship certificate – front'),
+                title: const Text('Citizenship certificate – front *'),
               ),
               CheckboxListTile(
                 value: _back,
                 onChanged: (v) => setState(() => _back = v!),
-                title: const Text('Citizenship certificate – back'),
+                title: const Text('Citizenship certificate – back *'),
               ),
               CheckboxListTile(
                 value: _photo,
                 onChanged: (v) => setState(() => _photo = v!),
-                title: const Text('Customer photo'),
+                title: const Text('Customer photo *'),
               ),
             ]),
           ),
@@ -609,7 +678,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               contentPadding: EdgeInsets.zero,
               value: _consent,
               onChanged: (v) => setState(() => _consent = v!),
-              title: const Text('The customer has read (or heard) the account terms and agrees to them.'),
+              title: const Text('The customer has read (or heard) the account terms and agrees to them. *'),
             ),
           ),
         ],
