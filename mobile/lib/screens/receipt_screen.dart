@@ -126,42 +126,78 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                     padding: const EdgeInsets.all(16),
                     children: [
                       if (t.status == 'confirmed')
-                        const MessageBox('Transaction confirmed', error: false)
+                        _confirmedBanner(t)
                       else
                         MessageBox('Transaction ${t.statusLabel.toLowerCase()}'
                             '${t.failureReason != null ? ' (${t.failureReason})' : ''}'),
                       const SizedBox(height: 12),
-                      SectionCard(
-                        child: Column(
-                          children: [
-                            const Text('FinBridge Agent Banking',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: FbColors.primary)),
-                            if (t.partnerBank.isNotEmpty)
-                              Text('Partner bank: ${t.partnerBank}', style: const TextStyle(color: FbColors.success, fontSize: 12)),
-                            Text('Agent: ${t.agent['name'] ?? ''} (${t.agent['agentId'] ?? ''})',
-                                style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
-                            Text('${t.agent['location'] ?? ''}',
-                                textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
-                            const SizedBox(height: 8),
-                            StatusChip(t.status),
-                            const Divider(height: 24),
-                            InfoRow('Reference', t.reference),
-                            InfoRow('Date / time', formatNepalTime(t.confirmedAt ?? t.createdAt)),
-                            InfoRow('Service', t.service),
-                            InfoRow('Customer', t.customerName),
-                            InfoRow('Account', t.accountMasked),
-                            const Divider(height: 24),
-                            InfoRow(t.isDeposit ? 'Cash deposited' : 'Cash paid out', formatNpr(t.amount)),
-                            InfoRow('Service fee', formatNpr(t.fee)),
-                            InfoRow(t.totalLabel, formatNpr(t.total), bold: true),
-                            const SizedBox(height: 4),
-                            Text('In words: ${t.amountInWords}',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: FbColors.success, fontStyle: FontStyle.italic, fontSize: 12)),
-                            const Divider(height: 24),
-                            const Text('Simulated receipt for an academic prototype. Not a real bank voucher.',
-                                textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: FbColors.textMuted)),
-                          ],
+                      ClipPath(
+                        clipper: _ZigZagClipper(),
+                        child: Container(
+                          color: FbColors.surface,
+                          padding: const EdgeInsets.fromLTRB(18, 26, 18, 26),
+                          child: Column(
+                            children: [
+                              const FbLogo(),
+                              const SizedBox(height: 8),
+                              if (t.partnerBank.isNotEmpty)
+                                Text('Partner bank: ${t.partnerBank}',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                        color: FbColors.accentDark, fontSize: 12, fontWeight: FontWeight.w600)),
+                              Text(
+                                  '${t.agent['location'] ?? ''} • Agent: ${t.agent['name'] ?? ''} '
+                                  '(${t.agent['agentId'] ?? ''})',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
+                              const SizedBox(height: 14),
+                              _stamp(t),
+                              const SizedBox(height: 14),
+                              const _DashedLine(),
+                              const SizedBox(height: 10),
+                              InfoRow('Reference', t.reference),
+                              InfoRow('Date (BS)', formatBsDateTime(t.confirmedAt ?? t.createdAt)),
+                              InfoRow('Date (AD)', formatNepalTime(t.confirmedAt ?? t.createdAt)),
+                              InfoRow('Service', t.service),
+                              InfoRow('Customer', t.customerName),
+                              InfoRow('Account', t.accountMasked),
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                    color: FbColors.primaryLight, borderRadius: BorderRadius.circular(14)),
+                                child: Column(children: [
+                                  InfoRow(t.isDeposit ? 'Cash deposited' : 'Cash paid out', formatNpr(t.amount)),
+                                  InfoRow('Service fee', t.fee == 0 ? 'Free' : formatNpr(t.fee)),
+                                  const Divider(height: 18),
+                                  Row(children: [
+                                    Expanded(
+                                      child: Text(t.totalLabel,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w800, fontSize: 16, color: FbColors.primary)),
+                                    ),
+                                    Text(formatNpr(t.total),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w800, fontSize: 22, color: FbColors.primary)),
+                                  ]),
+                                  const SizedBox(height: 4),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text('In words: ${t.amountInWords}',
+                                        style: const TextStyle(
+                                            color: FbColors.accentDark, fontStyle: FontStyle.italic, fontSize: 12)),
+                                  ),
+                                ]),
+                              ),
+                              const SizedBox(height: 14),
+                              const _DashedLine(),
+                              const SizedBox(height: 10),
+                              if (t.status == 'confirmed')
+                                const Text('An SMS receipt was sent to the customer.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 12, color: FbColors.textMuted)),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -175,7 +211,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                         TextButton.icon(
                           onPressed: _dispute,
                           icon: const Icon(Icons.report_gmailerrorred, color: FbColors.danger),
-                          label: const Text('Report a problem with this transaction', style: TextStyle(color: FbColors.danger)),
+                          label: const Text('Report a problem', style: TextStyle(color: FbColors.danger)),
                         ),
                       ],
                       const SizedBox(height: 8),
@@ -187,4 +223,81 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       ),
     );
   }
+
+  Widget _confirmedBanner(Txn t) => Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: FbColors.accent, borderRadius: BorderRadius.circular(16)),
+        child: Row(children: [
+          const CircleAvatar(
+            radius: 16,
+            backgroundColor: FbColors.primary,
+            child: Icon(Icons.check, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Transaction confirmed',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: FbColors.primary)),
+              Text(t.reference, style: const TextStyle(color: FbColors.primary)),
+            ]),
+          ),
+        ]),
+      );
+
+  Widget _stamp(Txn t) {
+    final ok = t.status == 'confirmed';
+    final color = ok ? FbColors.accentDark : FbColors.danger;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: ok ? FbColors.successBg : FbColors.dangerBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color, width: 1.5),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(ok ? Icons.check_circle_outline : Icons.cancel_outlined, color: color),
+        const SizedBox(width: 6),
+        Text(t.statusLabel.toUpperCase(),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 1, color: color)),
+      ]),
+    );
+  }
+}
+
+/// Paper-receipt edges: small zig-zags along the top and bottom.
+class _ZigZagClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    const tooth = 8.0;
+    final path = Path()..moveTo(0, tooth);
+    for (var x = 0.0; x < size.width; x += tooth * 2) {
+      path
+        ..lineTo(x + tooth, 0)
+        ..lineTo(x + tooth * 2, tooth);
+    }
+    path.lineTo(size.width, size.height - tooth);
+    for (var x = size.width; x > 0; x -= tooth * 2) {
+      path
+        ..lineTo(x - tooth, size.height)
+        ..lineTo(x - tooth * 2, size.height - tooth);
+    }
+    return path..close();
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+class _DashedLine extends StatelessWidget {
+  const _DashedLine();
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (_, c) => Row(
+          children: [
+            for (var i = 0; i < c.maxWidth ~/ 8; i++)
+              Container(width: 4, height: 1.2, margin: const EdgeInsets.only(right: 4), color: FbColors.border),
+          ],
+        ),
+      );
 }

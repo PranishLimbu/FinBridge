@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
-import '../firebase_options.dart';
 import '../state/session.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -32,7 +31,6 @@ class TerminalScreen extends StatelessWidget {
                     InfoRow('Location', a.location),
                     InfoRow('Terminal', a.terminalId ?? '-'),
                     InfoRow('Partner bank', a.partnerBank),
-                    InfoRow('Firebase project', DefaultFirebaseOptions.currentPlatform.projectId),
                   ]),
                 ),
                 const SizedBox(height: 12),
@@ -47,10 +45,10 @@ class TerminalScreen extends StatelessWidget {
                     const Divider(height: 1),
                     ListTile(
                       leading: const Icon(Icons.swap_vert, color: FbColors.primary),
-                      title: const Text('Request float rebalance'),
-                      subtitle: const Text('Hand cash to the bank, or ask for more'),
+                      title: const Text('Rebalance cash'),
+                      subtitle: const Text('Send extra cash to the bank, or ask for more'),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _rebalance(context),
+                      onTap: () => rebalance(context),
                     ),
                     const Divider(height: 1),
                     ListTile(
@@ -67,12 +65,6 @@ class TerminalScreen extends StatelessWidget {
                   onPressed: () => session.logout(),
                   icon: const Icon(Icons.logout),
                   label: const Text('Log out'),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'FinBridge is an academic prototype. All banks, people, accounts and money are fictional.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: FbColors.textMuted),
                 ),
               ],
             ),
@@ -138,7 +130,8 @@ class TerminalScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _rebalance(BuildContext context) async {
+  /// Asks the supervisor to take extra cash to the bank, or to send more. Also used by the dashboard.
+  static Future<void> rebalance(BuildContext context) async {
     final amount = TextEditingController();
     final api = context.read<Session>().api;
     final messenger = ScaffoldMessenger.of(context);
@@ -149,19 +142,19 @@ class TerminalScreen extends StatelessWidget {
         String? error;
         return StatefulBuilder(
           builder: (ctx, setState) => AlertDialog(
-            title: const Text('Float rebalance'),
+            title: const Text('Rebalance cash'),
             content: Column(mainAxisSize: MainAxisSize.min, children: [
               RadioListTile<String>(
                 value: 'cash_to_bank',
                 groupValue: direction,
                 onChanged: (v) => setState(() => direction = v!),
-                title: const Text('Hand excess cash to the bank'),
+                title: const Text('Send extra cash to the bank'),
               ),
               RadioListTile<String>(
                 value: 'cash_from_bank',
                 groupValue: direction,
                 onChanged: (v) => setState(() => direction = v!),
-                title: const Text('Request more cash from the bank'),
+                title: const Text('Ask the bank for more cash'),
               ),
               TextField(
                 controller: amount,
