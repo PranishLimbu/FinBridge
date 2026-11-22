@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
+import '../api/models.dart';
 import '../state/session.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -50,8 +51,46 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // Documents
   bool _front = false, _back = false, _photo = false, _consent = false;
 
+  // Address lists from the server. Until they load (or if they cannot), the plain text fields
+  // above are used instead, so onboarding never gets stuck.
+  Locations? _locs;
+  bool _locsFailed = false;
+  String? _provinceId = '3'; // Bagmati
+  String? _districtId, _localBodyId, _issueDistrictId;
+  String? _districtError, _localBodyError, _issueDistrictError;
+
+  bool get _useLists => _locs != null && !_locs!.isEmpty;
+
   static const _provinces = ['Koshi', 'Madhesh', 'Bagmati', 'Gandaki', 'Lumbini', 'Karnali', 'Sudurpashchim'];
   static const _steps = ['Personal', 'Family', 'Address', 'Documents'];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocations();
+  }
+
+  Future<void> _loadLocations() async {
+    try {
+      final res = await context.read<Session>().api.get('/locations') as Map<String, dynamic>;
+      if (mounted) setState(() => _locs = Locations.fromJson(res));
+    } on ApiException {
+      if (mounted) setState(() => _locsFailed = true);
+    }
+  }
+
+  /// Checks the dropdowns on the current step; they are not form fields, so Form.validate misses them.
+  bool _listsValid() {
+    if (!_useLists) return true;
+    setState(() {
+      if (_step == 0) _issueDistrictError = _issueDistrictId == null ? 'Choose the issue district' : null;
+      if (_step == 2) {
+        _districtError = _districtId == null ? 'Choose a district' : null;
+        _localBodyError = _localBodyId == null ? 'Choose a municipality' : null;
+      }
+    });
+    return _step == 0 ? _issueDistrictError == null : _step != 2 || (_districtError == null && _localBodyError == null);
+  }
 
   @override
   void dispose() {
@@ -98,7 +137,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       setState(() => _error = 'The customer must be at least 16 years old');
       return;
     }
-    if (!_forms[_step].currentState!.validate()) return;
+    final listsOk = _listsValid();
+    if (!_forms[_step].currentState!.validate() || !listsOk) return;
     setState(() {
       _error = null;
       _step++;
@@ -121,6 +161,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _busy = true;
       _error = null;
     });
+    final locs = _useLists ? _locs! : null;
+    String name(List<Place> list, String? id) => locs!.byId(list, id)?.name ?? '';
     final body = {
       'firstName': _first.text.trim(),
       'middleName': _middle.text.trim(),
@@ -133,7 +175,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'mobile': _mobile.text.trim(),
       'citizenshipNo': _citizenship.text.trim(),
       'citizenshipIssueDateBs': _issueBs.text.trim(),
-      'citizenshipIssueDistrict': _issueDistrict.text.trim(),
+      'citizenshipIssueDistrict': locs != null ? name(locs.districts, _issueDistrictId) : _issueDistrict.text.trim(),
       'pan': _pan.text.trim(),
       'family': {
         'fatherName': _father.text.trim(),
@@ -142,9 +184,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         'spouseName': _spouse.text.trim(),
       },
       'address': {
-        'province': _province,
-        'district': _district.text.trim(),
-        'municipality': _municipality.text.trim(),
+        'province': locs != null ? name(locs.provinces, _provinceId) : _province,
+        'district': locs != null ? name(locs.districts, _districtId) : _district.text.trim(),
+        'municipality': locs != null ? name(locs.localBodies, _localBodyId) : _municipality.text.trim(),
         'ward': int.tryParse(_ward.text.trim()) ?? 0,
         'tole': _tole.text.trim(),
       },
@@ -315,7 +357,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ? null
                       : 'Use the format printed on the certificate'),
               _field(_issueBs, bi('Issue date, BS', 'जारी मिति'), hint: '2060-03-22', validator: _bsDate),
-              _field(_issueDistrict, bi('Issue district', 'जारी जिल्ला'), validator: _req),
+              if (_useLists)
+                _placeMenu(
+                  key: const ValueKey('issue-district'),
+                  label: bi('Issue district', 'जारी जिल्ला'),
+                  places: _locs!.districts,
+                  selected: _issueDistrictId,
+                  error: _issueDistrictError,
+                  onSelected: (id) => setState(() {
+                    _issueDistrictId = id;
+                    _issueDistrictError = null;
+                  }),
+                )
+              else
+                _field(_issueDistrict, bi('Issue district', 'जारी जिल्ला'), validator: _req),
               _field(_pan, bi('PAN (optional)', 'स्थायी लेखा नं.'),
                   keyboard: TextInputType.number,
                   maxLength: 9,
@@ -337,20 +392,45 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ]),
       );
 
+  /// Searchable dropdown: tap to scroll the list, or type to filter it.
+  Widget _placeMenu({
+    required Key key,
+    required String label,
+    required List<Place> places,
+    required String? selected,
+    required String? error,
+    required ValueChanged<String?> onSelected,
+    String? hint,
+  }) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: DropdownMenu<String>(
+          key: key,
+          initialSelection: selected,
+          enabled: places.isNotEmpty,
+          expandedInsets: EdgeInsets.zero,
+          menuHeight: 320,
+          enableFilter: true,
+          requestFocusOnTap: true,
+          label: Text(label),
+          hintText: hint ?? 'Type to search',
+          errorText: error,
+          dropdownMenuEntries: [
+            for (final p in places)
+              DropdownMenuEntry(
+                value: p.id,
+                label: p.name,
+                labelWidget: Text(p.nameNe.isEmpty ? p.name : '${p.name}  (${p.nameNe})'),
+              ),
+          ],
+          onSelected: onSelected,
+        ),
+      );
+
   Widget _address() => SectionCard(
         title: 'Permanent address',
         child: Column(children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: DropdownButtonFormField<String>(
-              value: _province,
-              decoration: InputDecoration(labelText: bi('Province', 'प्रदेश')),
-              items: [for (final p in _provinces) DropdownMenuItem(value: p, child: Text(p))],
-              onChanged: (v) => setState(() => _province = v!),
-            ),
-          ),
-          _field(_district, bi('District', 'जिल्ला'), validator: _req),
-          _field(_municipality, bi('Municipality / rural municipality', 'नगरपालिका / गाउँपालिका'), validator: _req),
+          if (_useLists) ..._addressLists() else ..._addressText(),
           _field(_ward, bi('Ward no.', 'वडा नं.'),
               keyboard: TextInputType.number,
               maxLength: 2,
@@ -361,6 +441,71 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           _field(_tole, bi('Tole / street (optional)', 'टोल')),
         ]),
       );
+
+  List<Widget> _addressLists() {
+    final locs = _locs!;
+    final districts = locs.districtsOf(_provinceId);
+    final bodies = locs.localBodiesOf(_districtId);
+    return [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: DropdownButtonFormField<String>(
+          value: _provinceId,
+          decoration: InputDecoration(labelText: bi('Province', 'प्रदेश')),
+          items: [
+            for (final p in locs.provinces) DropdownMenuItem(value: p.id, child: Text('${p.name}  (${p.nameNe})')),
+          ],
+          onChanged: (v) => setState(() {
+            if (v == _provinceId) return;
+            _provinceId = v;
+            _districtId = null;
+            _localBodyId = null;
+          }),
+        ),
+      ),
+      // Keys include the parent so a child list starts empty whenever its parent changes.
+      _placeMenu(
+        key: ValueKey('district-$_provinceId'),
+        label: bi('District', 'जिल्ला'),
+        places: districts,
+        selected: _districtId,
+        error: _districtError,
+        onSelected: (id) => setState(() {
+          if (id != _districtId) _localBodyId = null;
+          _districtId = id;
+          _districtError = null;
+        }),
+      ),
+      _placeMenu(
+        key: ValueKey('local-body-$_districtId'),
+        label: bi('Municipality / rural municipality', 'नगरपालिका / गाउँपालिका'),
+        places: bodies,
+        selected: _localBodyId,
+        error: _localBodyError,
+        hint: _districtId == null ? 'Choose the district first' : '${bodies.length} in this district — type to search',
+        onSelected: (id) => setState(() {
+          _localBodyId = id;
+          _localBodyError = null;
+        }),
+      ),
+    ];
+  }
+
+  List<Widget> _addressText() => [
+        if (_locs == null && !_locsFailed)
+          const Padding(padding: EdgeInsets.only(bottom: 12), child: LinearProgressIndicator(minHeight: 2)),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: DropdownButtonFormField<String>(
+            value: _province,
+            decoration: InputDecoration(labelText: bi('Province', 'प्रदेश')),
+            items: [for (final p in _provinces) DropdownMenuItem(value: p, child: Text(p))],
+            onChanged: (v) => setState(() => _province = v!),
+          ),
+        ),
+        _field(_district, bi('District', 'जिल्ला'), validator: _req),
+        _field(_municipality, bi('Municipality / rural municipality', 'नगरपालिका / गाउँपालिका'), validator: _req),
+      ];
 
   Widget _documents() => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -8,6 +8,9 @@ function getStore() {
     if (config.dbDriver === 'firestore') {
       const { createFirestoreStore } = require('./firestoreStore');
       store = createFirestoreStore(config.firebase);
+    } else if (config.dbDriver === 'sqlite') {
+      const { createSqliteStore } = require('./sqliteStore');
+      store = createSqliteStore(config.sqlite);
     } else {
       store = createMemoryStore();
     }

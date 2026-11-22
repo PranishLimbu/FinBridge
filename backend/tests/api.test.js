@@ -18,8 +18,13 @@ let keyN = 0;
 const key = () => `test-key-${++keyN}-${Date.now()}`;
 const HARI = { customerId: 'CUST-884102', accountNo: '010201750004092' };
 
+// TEST_DB=sqlite runs the same tests against a fresh in-memory SQLite database.
+const newStore = () => (process.env.TEST_DB === 'sqlite'
+  ? require('../src/db/sqliteStore').createSqliteStore({ file: ':memory:' })
+  : createMemoryStore());
+
 beforeEach(async () => {
-  store = createMemoryStore();
+  store = newStore();
   setStore(store);
   await seed(store);
   app = createApp();
@@ -179,9 +184,9 @@ describe('UC3 onboarding and KYC review', () => {
   const application = {
     firstName: 'Kamala', lastName: 'Rai', gender: 'female', maritalStatus: 'married',
     dobBs: '2045-02-10', dobAd: '1988-05-23', occupation: 'Teacher', mobile: '9861112233',
-    citizenshipNo: '12-03-79-55120', citizenshipIssueDateBs: '2063-04-01', citizenshipIssueDistrict: 'Sindhupalchok',
+    citizenshipNo: '12-03-79-55120', citizenshipIssueDateBs: '2063-04-01', citizenshipIssueDistrict: 'Sindhupanchowk',
     family: { fatherName: 'Dil Bahadur Rai', motherName: 'Sita Rai', grandfatherName: 'Man Bahadur Rai' },
-    address: { province: 'Bagmati', district: 'Sindhupalchok', municipality: 'Melamchi', ward: 5 },
+    address: { province: 'Bagmati', district: 'Sindhupanchowk', municipality: 'Melanchi Municipality', ward: 5 },
     documents: { citizenshipFront: true, citizenshipBack: true, photo: true },
     consent: true,
   };
@@ -209,6 +214,34 @@ describe('UC3 onboarding and KYC review', () => {
     expect(minor.body.error.code).toBe('VALIDATION_ERROR');
     const noDocs = await request(app).post('/api/customers').set(auth(t)).send({ ...application, documents: { citizenshipFront: true, citizenshipBack: false, photo: true } });
     expect(noDocs.body.error.code).toBe('VALIDATION_ERROR');
+  });
+  test('serves the location lists: 7 provinces, 77 districts, 753 municipalities', async () => {
+    const t = await login();
+    const r = await request(app).get('/api/locations').set(auth(t));
+    expect(r.status).toBe(200);
+    expect(r.body.provinces).toHaveLength(7);
+    expect(r.body.districts).toHaveLength(77);
+    expect(r.body.localBodies).toHaveLength(753);
+    const ktm = r.body.districts.find((d) => d.name === 'Kathmandu');
+    expect(r.body.localBodies.filter((l) => l.districtId === ktm.id)).toHaveLength(11);
+    // Renamed bodies replace their old names; duplicates are gone.
+    expect(r.body.localBodies.some((l) => l.name === 'Pathibhara Yangwarak Rural Municipality')).toBe(true);
+    expect(r.body.localBodies.some((l) => l.name === 'Yangwarak Rural Municipality')).toBe(false);
+  });
+  test('rejects addresses that are not in the location list or do not belong together', async () => {
+    const t = await login();
+    const post = (patch) => request(app).post('/api/customers').set(auth(t)).send({ ...application, ...patch });
+    const wrongDistrict = await post({ address: { ...application.address, district: 'Kaski' } });
+    expect(wrongDistrict.body.error.details.fields[0].field).toBe('address.district');
+    const wrongTown = await post({ address: { ...application.address, municipality: 'Pokhara Metropolitan City' } });
+    expect(wrongTown.body.error.details.fields[0].field).toBe('address.municipality');
+    const badIssue = await post({ citizenshipIssueDistrict: 'Atlantis' });
+    expect(badIssue.body.error.details.fields[0].field).toBe('citizenshipIssueDistrict');
+    // Case and spacing do not matter; the stored address uses the official spelling and IDs.
+    const ok = await post({ address: { ...application.address, municipality: '  melanchi   municipality ' } });
+    expect(ok.status).toBe(201);
+    const c = await request(app).get(`/api/customers/${ok.body.customerId}`).set(auth(t));
+    expect(c.body.address).toMatchObject({ municipality: 'Melanchi Municipality', districtId: '30', localBodyId: '347' });
   });
   test('agents cannot use supervisor endpoints', async () => {
     const t = await login();

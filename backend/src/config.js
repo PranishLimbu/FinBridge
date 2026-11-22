@@ -1,3 +1,4 @@
+const path = require('path');
 require('dotenv').config({ quiet: true });
 
 const env = process.env;
@@ -5,8 +6,13 @@ const env = process.env;
 const config = {
   port: Number(env.PORT || 4000),
   nodeEnv: env.NODE_ENV || 'development',
-  // 'memory' keeps everything in RAM (demo and tests); 'firestore' uses Cloud Firestore.
+  // 'sqlite' saves to a local file; 'memory' keeps everything in RAM (tests, quick demos);
+  // 'firestore' uses Cloud Firestore.
   dbDriver: env.DB_DRIVER || 'memory',
+  sqlite: {
+    // Relative paths are resolved from the backend folder, wherever the server is started from.
+    file: path.resolve(__dirname, '..', env.SQLITE_FILE || 'data/finbridge.db'),
+  },
   firebase: {
     projectId: env.FIREBASE_PROJECT_ID,
     // Path to the service-account JSON downloaded from the Firebase console.

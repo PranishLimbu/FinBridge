@@ -3,6 +3,7 @@ const { getStore } = require('../db');
 const { AppError, nowIso, maskAccount, maskMobile, maskCitizenship } = require('../utils/helpers');
 const { paisaToRupees } = require('../utils/money');
 const { audit, auditInTx } = require('./auditService');
+const { resolveAddress } = require('./locationService');
 
 const fullName = (c) => [c.firstName, c.middleName, c.lastName].filter(Boolean).join(' ');
 
@@ -69,6 +70,8 @@ async function onboard(agentId, input) {
   if (dupes.length) throw new AppError(409, 'DUPLICATE_CITIZENSHIP', 'A customer with this citizenship number already exists');
   const mobileDupes = await store.query('customers', { where: [['mobile', '==', input.mobile]] });
   if (mobileDupes.length) throw new AppError(409, 'DUPLICATE_MOBILE', 'This mobile number is already registered');
+  const { address, issueDistrict } = await resolveAddress(input.address, input.citizenshipIssueDistrict);
+  input = { ...input, address, citizenshipIssueDistrict: issueDistrict };
 
   const customerId = `CUST-${crypto.randomInt(100000, 999999)}`;
   const accountNo = `0102${crypto.randomInt(10000000, 99999999)}`;

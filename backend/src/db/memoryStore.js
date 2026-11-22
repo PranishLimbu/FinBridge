@@ -79,4 +79,4 @@ function createMemoryStore() {
   return store;
 }
 
-module.exports = { createMemoryStore };
+module.exports = { createMemoryStore, matches };

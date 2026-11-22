@@ -17,6 +17,36 @@ class Agent {
   final String partnerBank;
 }
 
+/// A province, district or municipality. [parentId] is the province of a district, or the
+/// district of a municipality.
+class Place {
+  Place(this.id, this.name, this.nameNe, this.parentId);
+
+  final String id, name, nameNe;
+  final String? parentId;
+}
+
+/// Nepal's administrative divisions from GET /locations, for the address dropdowns.
+class Locations {
+  Locations.fromJson(Map<String, dynamic> j)
+      : provinces = _list(j['provinces'], null),
+        districts = _list(j['districts'], 'provinceId'),
+        localBodies = _list(j['localBodies'], 'districtId');
+
+  final List<Place> provinces, districts, localBodies;
+
+  bool get isEmpty => districts.isEmpty || localBodies.isEmpty;
+  List<Place> districtsOf(String? provinceId) => districts.where((d) => d.parentId == provinceId).toList();
+  List<Place> localBodiesOf(String? districtId) => localBodies.where((l) => l.parentId == districtId).toList();
+  Place? byId(List<Place> list, String? id) => list.where((p) => p.id == id).firstOrNull;
+
+  static List<Place> _list(dynamic raw, String? parentKey) => [
+        for (final m in (raw as List? ?? []).cast<Map<String, dynamic>>())
+          Place(m['id'] as String, m['name'] as String, m['nameNe'] as String? ?? '',
+              parentKey == null ? null : m[parentKey] as String?),
+      ];
+}
+
 class Float {
   Float.fromJson(Map<String, dynamic> j)
       : cash = _d(j['cash']),

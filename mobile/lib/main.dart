@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
+import 'screens/supervisor_screen.dart';
 import 'state/session.dart';
 import 'theme.dart';
 
@@ -29,9 +30,11 @@ class FinBridgeApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: buildTheme(),
         // Rebuilding with a new key on login/logout clears every pushed screen.
-        home: session.isLoggedIn
-            ? HomeShell(key: ValueKey(session.agent!.id))
-            : const LoginScreen(),
+        home: !session.isLoggedIn
+            ? const LoginScreen()
+            : session.agent!.role == 'supervisor'
+                ? SupervisorScreen(key: ValueKey(session.agent!.id))
+                : HomeShell(key: ValueKey(session.agent!.id)),
       ),
     );
   }

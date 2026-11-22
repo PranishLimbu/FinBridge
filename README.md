@@ -9,7 +9,7 @@ journal and end-of-day cash reconciliation.
 
 ```
 finbridge/
-├── backend/   Node.js + Express API, Cloud Firestore (or in-memory demo database)
+├── backend/   Node.js + Express API, SQLite (or Cloud Firestore, or an in-memory demo database)
 └── mobile/    Flutter agent app (Android first)
 ```
 
@@ -30,17 +30,24 @@ cp .env.example .env        # Windows: copy .env.example .env
 npm start
 ```
 
-With the default `DB_DRIVER=memory` it starts with demo data and needs no Firebase account
-(data resets on restart). You should see:
+With `DB_DRIVER=sqlite` (the default in `.env.example`) data is saved to
+`backend/data/finbridge.db` and survives restarts. It uses the SQLite built into Node, so there is
+nothing to install and no account needed. The first start creates the file with the demo data. You
+should see:
 
 ```
-FinBridge API listening on http://localhost:4000/api (db: memory)
+FinBridge API listening on http://localhost:4000/api (db: sqlite)
 ```
+
+To start again from clean demo data, stop the server and delete the `backend/data` folder. Open the
+file with any SQLite viewer (e.g. DB Browser for SQLite): each collection is a table with an `id`
+and a JSON `data` column. `DB_DRIVER=memory` keeps everything in RAM instead (resets on restart).
 
 Run the automated tests (23 tests):
 
 ```bash
-npm test
+npm test               # against the in-memory store
+npm run test:sqlite    # the same tests against SQLite
 ```
 
 ### Demo logins (PIN `123456` for all)
@@ -49,7 +56,7 @@ npm test
 |---|---|---|
 | `AGT-98412` | Agent – Sita Sharma | Main demo agent |
 | `AGT-77020` | Agent – Ramesh Adhikari | Second agent |
-| `SUP-001` | Supervisor – Pratima Karki | API only: KYC approval, unlock agents |
+| `SUP-001` | Supervisor – Pratima Karki | Log in to the app: approve KYC and float requests, unlock agents |
 
 Demo customers: Hari Bahadur Thapa (mobile `9851012347`), Sunita Tamang (`9841234567`),
 Bikash Shrestha (`9803456789`), Maya Kumari Gurung (`9812345670`, low balance).
@@ -73,9 +80,14 @@ Bikash Shrestha (`9803456789`), Maya Kumari Gurung (`9812345670`, low balance).
    firebase use <your project id>
    firebase deploy --only firestore:rules,firestore:indexes
    ```
-   Indexes take a few minutes to build. If a query fails with “requires an index”, the error
-   message contains a link that creates it.
-5. Load the demo data once: `npm run seed:firestore`
+   Indexes take a few minutes to build. Without the Firebase CLI you can instead create the one
+   index that matters by hand (Firestore → Indexes → **Composite** → Create index): collection
+   `transactions`, fields `agentId` Ascending and `createdAt` Descending. Until it exists, the API
+   still works: it filters those queries itself and logs a link that creates the index.
+5. Load the demo data once: `npm run seed:firestore`, then the address lists (7 provinces, 77
+   districts, 753 municipalities from `backend/reference-data/`): `npm run import:locations`.
+   Run the import again after editing those files. (The memory and SQLite databases load the lists
+   by themselves when they are first created.)
 6. `npm start`, which should now say `(db: firestore)`.
 
 ## 3. Run the Flutter app
@@ -103,6 +115,7 @@ android:usesCleartextTraffic="true"
 |---|---|
 | Android emulator | `http://10.0.2.2:4000/api` (default, nothing to change) |
 | Real phone on the same Wi-Fi | `flutter run --dart-define=API_URL=http://<laptop IP>:4000/api` |
+| Browser (`flutter run -d web-server --web-port 8080`) | `http://localhost:4000/api` (default, nothing to change) |
 | iOS simulator | `flutter run --dart-define=API_URL=http://localhost:4000/api` |
 
 Find your laptop's IP with `ipconfig` (Windows) or `ifconfig` / `ip a` (macOS/Linux), and allow
@@ -117,7 +130,13 @@ port 4000 through the firewall.
    screen (and in the server console) because there is no SMS gateway. Enter it → receipt.
    Try a wrong OTP three times to see the cancellation.
 4. **Onboarding:** Customers → New customer → fill the four steps → submit. The account stays
-   *pending* until a supervisor approves it:
+   *pending* until a supervisor approves it: log out, log in as `SUP-001` / `123456` and press
+   **Approve**. Or from the command line on Windows, from `backend/`:
+   ```powershell
+   .\scripts\kyc-review.ps1                  # list pending applications
+   .\scripts\kyc-review.ps1 -Approve all     # or -Approve CUSTOMER_ID / -Reject ID -Reason "..."
+   ```
+   Or with curl:
    ```bash
    # get a supervisor token
    curl -s -X POST localhost:4000/api/auth/login -H "content-type: application/json" \
@@ -182,6 +201,6 @@ Amounts are in rupees. Errors look like `{"error":{"code":"...","message":"...",
 - SMS, OTP delivery, receipt printing and document photos are simulated.
 - No connection to a real core banking system; balances live in this database.
 - BS and AD dates of birth are entered separately (no automatic calendar conversion yet).
-- Supervisor tasks are API-only; there is no supervisor app or web portal.
+- The supervisor screen in the app covers KYC, float requests and unlocking agents only; there is no separate supervisor portal.
 - `EXPOSE_DEV_OTP=true` shows OTPs in API responses for demos. The server refuses to start with
   it in production mode.

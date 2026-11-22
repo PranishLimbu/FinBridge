@@ -8,6 +8,12 @@ async function main() {
   if (store.driver === 'memory') {
     await seed(store, { log: true });
     console.log('Using the in-memory database: data resets when the server restarts.');
+  } else if (store.driver === 'sqlite') {
+    if (await store.isEmpty()) {
+      await seed(store, { log: true });
+      console.log('New SQLite database created with demo data.');
+    }
+    console.log(`Using the SQLite database at ${store.file}`);
   }
   createApp().listen(config.port, '0.0.0.0', () => {
     console.log(`FinBridge API listening on http://localhost:${config.port}/api (db: ${store.driver})`);

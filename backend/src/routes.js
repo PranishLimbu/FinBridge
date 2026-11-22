@@ -7,6 +7,7 @@ const authService = require('./services/authService');
 const customers = require('./services/customerService');
 const txns = require('./services/transactionService');
 const ops = require('./services/agentOpsService');
+const locations = require('./services/locationService');
 const { audit } = require('./services/auditService');
 
 const router = express.Router();
@@ -33,6 +34,12 @@ router.post('/auth/logout', async (req, res) => {
 router.post('/auth/change-pin', validate(S.changePin), async (req, res) => {
   await authService.changePin(req.user.id, req.body);
   res.json({ message: 'PIN changed' });
+});
+
+// Provinces, districts and municipalities for the address dropdowns.
+router.get('/locations', async (_req, res) => {
+  res.set('Cache-Control', 'private, max-age=3600');
+  res.json(await locations.getLocations());
 });
 
 // ---------------------------------------------------------------- agent

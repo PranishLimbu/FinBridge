@@ -5,9 +5,11 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
+    "dev": "node --watch-path=src src/server.js",
     "test": "jest --runInBand",
-    "seed:firestore": "node scripts/seed-firestore.js"
+    "test:sqlite": "node scripts/test-sqlite.js",
+    "seed:firestore": "node scripts/seed-firestore.js",
+    "import:locations": "node scripts/import-locations.js"
   },
   "keywords": [],
   "author": "",

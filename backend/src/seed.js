@@ -1,6 +1,7 @@
 // Fictional demo data. Every person, account and amount here is illustrative.
 const bcrypt = require('bcryptjs');
 const { nowIso, startOfNepalDay } = require('./utils/helpers');
+const { importLocations } = require('./services/locationService');
 
 const P = (rupees) => rupees * 100;
 const DEMO_BANK = 'Himalaya Partner Bank (fictional)';
@@ -46,7 +47,9 @@ async function seed(store, { log = false } = {}) {
       firstName: first, middleName: middle || undefined, lastName: last,
       nameLower: [first, middle, last].filter(Boolean).join(' ').toLowerCase(),
       gender, mobile, citizenshipNo: cit, occupation: 'Agriculture / Farmer',
-      address: { province: 'Bagmati', district: 'Kavrepalanchok', municipality: 'Dhulikhel', ward: 4 },
+      address: {
+        province: 'Bagmati', district: 'Kavreplanchowk', municipality: 'Dhulikhel Municipality', ward: 4, districtId: '26', localBodyId: '313',
+      },
       kycStatus: 'verified', createdByAgent: 'AGT-98412', createdAt: nowIso(),
     };
     Object.keys(c).forEach((k) => c[k] === undefined && delete c[k]);
@@ -55,7 +58,11 @@ async function seed(store, { log = false } = {}) {
       customerId: id, productName: 'Bachat Khata (Savings)', type: 'savings', balance: P(bal), status: 'active', openedAt: nowIso(),
     });
   }
-  if (log) console.log('Seeded 2 agents (PIN 123456), 1 supervisor SUP-001 (PIN 123456), 4 customers.');
+  const places = await importLocations(store);
+  if (log) {
+    console.log('Seeded 2 agents (PIN 123456), 1 supervisor SUP-001 (PIN 123456), 4 customers.');
+    console.log(`Loaded ${places.districts} districts and ${places.localBodies} municipalities.`);
+  }
 }
 
 module.exports = { seed, DEMO_BANK };
