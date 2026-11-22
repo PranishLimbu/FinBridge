@@ -717,6 +717,8 @@ class ApiClient {
         'totalLabel': t.data['type'] == 'deposit' ? 'Total credited' : 'Total debited',
         'agent': {'agentId': t.data['agentId'], 'name': t.data['agentName'], 'location': t.data['agentLocation']},
         'partnerBank': t.data['partnerBank'],
+        if (t.data['balanceBefore'] != null) 'balanceBefore': paisaToRupees(_int(t.data['balanceBefore'])),
+        if (t.data['balanceAfter'] != null) 'balanceAfter': paisaToRupees(_int(t.data['balanceAfter'])),
         'simulated': true,
       };
 
@@ -835,6 +837,8 @@ class ApiClient {
         'status': 'confirmed',
         'floatBefore': cash,
         'floatAfter': cash + input.amount,
+        'balanceBefore': _int(account!['balance']),
+        'balanceAfter': _int(account['balance']) + input.amount,
       };
       txn['confirmedAt'] = txn['createdAt'];
 
@@ -845,7 +849,7 @@ class ApiClient {
         'lastTxnId': id,
       });
       tx.update(_doc('accounts', input.accountNo), {
-        'balance': _int(account!['balance']) + _int(txn['total']),
+        'balance': _int(account['balance']) + _int(txn['total']),
         'lastTxnId': id,
       });
       tx.set(_doc('idempotency', idemId), {'transactionId': id, 'at': txn['createdAt']});
@@ -1030,6 +1034,8 @@ class ApiClient {
         'confirmedAt': confirmedAt,
         'floatBefore': cash,
         'floatAfter': cash - amount,
+        'balanceBefore': _int(account['balance']),
+        'balanceAfter': _int(account['balance']) - total,
         'otp': {...otpData, 'usedAt': confirmedAt},
       };
       tx.update(ref, update);

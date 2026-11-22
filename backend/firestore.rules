@@ -157,7 +157,7 @@ service cloud.firestore {
       allow update: if activeAgent()
         && resource.data.agentId == me()
         && resource.data.status == 'awaiting_otp'
-        && changed().hasOnly(['status', 'otp', 'confirmedAt', 'floatBefore', 'floatAfter', 'failureReason'])
+        && changed().hasOnly(['status', 'otp', 'confirmedAt', 'floatBefore', 'floatAfter', 'balanceBefore', 'balanceAfter', 'failureReason'])
         && (
           incoming().status in ['awaiting_otp', 'cancelled', 'failed']
           || (incoming().status == 'confirmed' && movedTogether(txnId))

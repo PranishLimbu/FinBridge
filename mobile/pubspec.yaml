@@ -14,6 +14,8 @@ dependencies:
   flutter:
     sdk: flutter
   nepali_utils: ^3.0.8
+  pdf: ^3.13.1
+  printing: ^5.15.1
   provider: ^6.1.2
 
 dev_dependencies:

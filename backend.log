@@ -1,0 +1,8 @@
+
+> finbridge-api@1.0.0 start
+> node src/server.js
+
+(node:6120) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Using the SQLite database at D:\BLB\FinBridge\backend\data\finbridge.db
+FinBridge API listening on http://localhost:4000/api (db: sqlite)

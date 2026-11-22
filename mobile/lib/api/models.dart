@@ -123,5 +123,7 @@ class Txn {
   String get service => raw['service'] as String? ?? typeLabel;
   String get totalLabel => raw['totalLabel'] as String? ?? 'Total';
   String get partnerBank => raw['partnerBank'] as String? ?? '';
+  double? get balanceBefore => (raw['balanceBefore'] as num?)?.toDouble();
+  double? get balanceAfter => (raw['balanceAfter'] as num?)?.toDouble();
   Map<String, dynamic> get agent => (raw['agent'] as Map<String, dynamic>?) ?? {};
 }

@@ -1,0 +1,285 @@
+Launching lib\main.dart on Redmi Note 9 Pro in debug mode...
+Running Gradle task 'assembleDebug'...                          
+Picked up JAVA_TOOL_OPTIONS: -Djava.net.preferIPv4Stack=true
+Warning: Flutter support for your project's Gradle version (9.3.1) will soon be dropped. Please upgrade your Gradle version to a version of at least 9.5.0 soon.
+Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
+
+Potential fix: Your project's gradle version is typically defined in the gradle wrapper file. By default, this can be found at D:\BLB\FinBridge\mobile\android/gradle/wrapper/gradle-wrapper.properties. 
+For more information, see https://docs.gradle.org/current/userguide/gradle_wrapper.html.
+
+Warning: Flutter support for your project's Android Gradle Plugin version (Android Gradle Plugin version 9.1.1) will soon be dropped. Please upgrade your Android Gradle Plugin version to a version of at least Android Gradle Plugin version 9.3.1 soon.
+Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
+
+Potential fix: Your project's AGP version is typically defined in the plugins block of the `settings.gradle` file (D:\BLB\FinBridge\mobile\android/settings.gradle), by a plugin with the id of com.android.application. 
+If you don't see a plugins block, your project was likely created with an older template version. In this case it is most likely defined in the top-level build.gradle file (D:\BLB\FinBridge\mobile\android/build.gradle) by the following line in the dependencies block of the buildscript: "classpath 'com.android.tools.build:gradle:<version>'".
+
+Warning: Flutter support for your project's Kotlin version (2.4.10) will soon be dropped. Please upgrade your Kotlin version to a version of at least 2.4.20 soon.
+Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
+
+Potential fix: Your project's KGP version is typically defined in the plugins block of the `settings.gradle` file (D:\BLB\FinBridge\mobile\android/settings.gradle), by a plugin with the id of org.jetbrains.kotlin.android. 
+If you don't see a plugins block, your project was likely created with an older template version, in which case it is most likely defined in the top-level build.gradle file (D:\BLB\FinBridge\mobile\android/build.gradle) by the ext.kotlin_version property.
+
+Running Gradle task 'assembleDebug'...                              3.2s
+√ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...          12.5s
+D/FlutterJNI(22504): Beginning load of flutter...
+D/FlutterJNI(22504): flutter (null) was loaded normally!
+I/flutter (22504): [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(105)] Using the Impeller rendering backend (OpenGLES).
+D/FlutterRenderer(22504): Width is zero. 0,0
+D/FlutterRenderer(22504): Width is zero. 0,0
+D/FlutterRenderer(22504): Width is zero. 0,0
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+W/Looper  (22504): PerfMonitor doFrame : time=458ms vsyncFrame=0 latency=2502ms procState=2 historyMsgCount=4 (msgIndex=1 wall=709ms seq=3 running=482ms runnable=153ms io=15ms reclaim=5ms late=50ms h=android.app.ActivityThread$H w=110) (msgIndex=2 wall=2180ms seq=4 running=653ms runnable=53ms io=255ms late=728ms h=android.app.ActivityThread$H w=159)
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+Syncing files to device Redmi Note 9 Pro...                     
+I/FirebaseApp(22504): Device unlocked: initializing all Firebase APIs for app [DEFAULT]
+Syncing files to device Redmi Note 9 Pro...                        148ms
+
+Flutter run key commands.
+r Hot reload. 
+R Hot restart.
+h List all available interactive commands.
+d Detach (terminate "flutter run" but leave application running).
+c Clear the screen
+q Quit (terminate the application on the device).
+
+A Dart VM Service on Redmi Note 9 Pro is available at: http://127.0.0.1:62359/KVdmd72flao=/
+The Flutter DevTools debugger and profiler on Redmi Note 9 Pro is available at: http://127.0.0.1:62359/KVdmd72flao=/devtools/?uri=ws://127.0.0.1:62359/KVdmd72flao=/ws
+I/Choreographer(22504): Skipped 209 frames!  The application may be doing too much work on its main thread.
+W/Looper  (22504): PerfMonitor doFrame : time=1ms vsyncFrame=0 latency=3496ms procState=2
+I/finbridge_agen(22504): ProcessProfilingInfo new_methods=3502 is saved saved_to_disk=1 resolve_classes_delay=8000
+D/DecorView[](22504): getWindowModeFromSystem  windowmode is 1
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+W/InputEventReceiver(22504): App Input: Dispatching InputEvent took 169ms in main thread! (MotionEvent: event_seq=0, seq=1112985, action=ACTION_DOWN)
+W/InputEventReceiver(22504): App Input: Dispatching InputEvent took 113ms in main thread! (MotionEvent: event_seq=1, seq=1112988, action=ACTION_UP)
+D/ProfileInstaller(22504): Installing profile for com.finbridge.finbridge_agent
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring on
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 1 line
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring on
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring off
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring on
+W/InputEventReceiver(22504): App Input: Dispatching InputEvent took 105ms in main thread! (MotionEvent: event_seq=17, seq=1113207, action=ACTION_UP)
+I/FirebaseAuth(22504): Logging in as agt-98412@finbridge.test with empty reCAPTCHA token
+I/DpmTcmClient(22504): RegisterTcmMonitor from: $Proxy1
+W/System  (22504): Ignoring header X-Firebase-Locale because its value was null.
+W/System  (22504): Ignoring header X-Firebase-Locale because its value was null.
+D/FirebaseAuth(22504): Notifying id token listeners about user ( AGT-98412 ).
+D/FirebaseAuth(22504): Notifying auth state listeners about user ( AGT-98412 ).
+I/TetheringManager(22504): registerTetheringEventCallback:com.finbridge.finbridge_agent
+W/DynamiteModule(22504): Local module descriptor class for com.google.android.gms.providerinstaller.dynamite not found.
+I/DynamiteModule(22504): Considering local module com.google.android.gms.providerinstaller.dynamite:0 and remote module com.google.android.gms.providerinstaller.dynamite:0
+W/ProviderInstaller(22504): Failed to load providerinstaller module: No acceptable module com.google.android.gms.providerinstaller.dynamite found. Local version is 0 and remote version is 0.
+I/finbridge_agen(22504): Waiting for a blocking GC ClassLinker
+W/finbridge_agen(22504): Accessing hidden method Ldalvik/system/VMStack;->getStackClass2()Ljava/lang/Class; (greylist, reflection, allowed)
+I/ProviderInstaller(22504): Installed default security provider AndroidOpenSSL (via CompatProvider)
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161335054, downTime=161335054, deviceId=-1, source=0x101, displayId=0 }
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161335102, downTime=161335054, deviceId=-1, source=0x101, displayId=0 }
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring off
+D/DecorView[](22504): getWindowModeFromSystem  windowmode is 1
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 1 line
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/flutter (22504): Courier-Bold has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+I/flutter (22504): Courier has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161350061, downTime=161350061, deviceId=-1, source=0x101, displayId=0 }
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161350104, downTime=161350061, deviceId=-1, source=0x101, displayId=0 }
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161358157, downTime=161358157, deviceId=-1, source=0x101, displayId=0 }
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161358190, downTime=161358157, deviceId=-1, source=0x101, displayId=0 }
+I/finbridge_agen(22504): Background concurrent copying GC freed 49723(2283KB) AllocSpace objects, 0(0B) LOS objects, 49% free, 6610KB/12MB, paused 302us total 104.128ms
+I/Choreographer(22504): Skipped 36 frames!  The application may be doing too much work on its main thread.
+W/Looper  (22504): PerfMonitor doFrame : time=1ms vsyncFrame=0 latency=606ms procState=2 historyMsgCount=6
+I/AssistStructure(22504): Flattened final assist data: 480 bytes, containing 1 windows, 3 views
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring on
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 3 lines
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+W/Looper  (22504): PerfMonitor doFrame : time=0ms vsyncFrame=0 latency=337ms procState=2 historyMsgCount=1
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring off
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 1 line
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 4 lines
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 1 line
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring on
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 4 lines
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 2 lines
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 3 lines
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+W/Looper  (22504): PerfMonitor doFrame : time=0ms vsyncFrame=0 latency=404ms procState=2 historyMsgCount=1
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring off
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 3 lines
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring on
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 5 lines
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 2 lines
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 1 line
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161373944, downTime=161373944, deviceId=-1, source=0x101, displayId=0 }
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161373970, downTime=161373944, deviceId=-1, source=0x101, displayId=0 }
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring off
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 1 line
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 1 line
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 1 line
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161377280, downTime=161377280, deviceId=-1, source=0x101, displayId=0 }
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161377331, downTime=161377280, deviceId=-1, source=0x101, displayId=0 }
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161387864, downTime=161387864, deviceId=-1, source=0x101, displayId=0 }
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161387887, downTime=161387864, deviceId=-1, source=0x101, displayId=0 }
+I/AssistStructure(22504): Flattened final assist data: 404 bytes, containing 1 windows, 3 views
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring on
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 6 lines
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 1 line
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161396221, downTime=161396221, deviceId=-1, source=0x101, displayId=0 }
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161396261, downTime=161396221, deviceId=-1, source=0x101, displayId=0 }
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring off
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161396453, downTime=161396453, deviceId=-1, source=0x101, displayId=0 }
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161396459, downTime=161396453, deviceId=-1, source=0x101, displayId=0 }
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/AssistStructure(22504): Flattened final assist data: 404 bytes, containing 1 windows, 3 views
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring on
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 3 lines
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 2 lines
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 2 lines
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/InputConnectionAdaptor(22504): The input method toggled cursor monitoring off
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 1 line
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 2 lines
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/chatty  (22504): uid=10431(com.finbridge.finbridge_agent) identical 4 lines
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+D/FlutterJNI(22504): Sending viewport metrics to the engine.
+I/flutter (22504): Courier-Bold has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+I/flutter (22504): Courier has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161431696, downTime=161431696, deviceId=-1, source=0x101, displayId=0 }
+D/MIUIInput(22504): [KeyEvent] ViewRootImpl KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=161431740, downTime=161431696, deviceId=-1, source=0x101, displayId=0 }
+I/flutter (22504): Courier-Bold has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+I/flutter (22504): Courier has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management

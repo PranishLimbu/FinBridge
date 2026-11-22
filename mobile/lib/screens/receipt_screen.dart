@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
@@ -6,6 +8,7 @@ import '../api/models.dart';
 import '../state/session.dart';
 import '../theme.dart';
 import '../utils/format.dart';
+import '../utils/receipt_pdf.dart';
 import '../widgets/common.dart';
 import 'home_shell.dart';
 
@@ -50,9 +53,19 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
     }
   }
 
-  void _print() {
-    // No printer integration in the prototype (report Table 3): show what would print.
-    setState(() => _notice = 'Printing is simulated in this prototype. Send the SMS receipt instead.');
+  Future<void> _print() async {
+    final t = _t;
+    if (t == null) return;
+    try {
+      // Opens the system print dialog (printer or Save as PDF); the browser's dialog on web.
+      await Printing.layoutPdf(
+        name: 'Receipt-${t.reference}',
+        format: const PdfPageFormat(80 * PdfPageFormat.mm, double.infinity, marginAll: 4 * PdfPageFormat.mm),
+        onLayout: (_) => buildReceiptPdf(t),
+      );
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Could not open the print dialog: $e');
+    }
   }
 
   Future<void> _dispute() async {
