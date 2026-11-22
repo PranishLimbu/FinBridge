@@ -4,6 +4,9 @@
 //                                     load demo data and the address lists
 //   npm run firebase:setup -- --reset same, but first DELETE every FinBridge collection
 //                                     (customers, transactions, logs...) and start clean
+//   npm run firebase:setup -- --reference-only
+//                                     publish the rules and reload only the master data
+//                                     (address lists, occupations); other data is untouched
 //
 // Uses serviceAccountKey.json (GOOGLE_APPLICATION_CREDENTIALS in .env). Before the first run,
 // enable Authentication -> Sign-in method -> Email/Password in the Firebase console.
@@ -12,6 +15,8 @@ const path = require('path');
 const config = require('../src/config');
 const { createFirestoreStore } = require('../src/db/firestoreStore');
 const { seed } = require('../src/seed');
+const { importLocations } = require('../src/services/locationService');
+const { importOccupations } = require('../src/services/occupationService');
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getSecurityRules } = require('firebase-admin/security-rules');
@@ -19,7 +24,7 @@ const { getSecurityRules } = require('firebase-admin/security-rules');
 const DEMO_PIN = '123456';
 const COLLECTIONS = [
   'agents', 'customers', 'accounts', 'transactions', 'idempotency', 'auditLogs', 'smsOutbox',
-  'eodReports', 'floatRequests', 'disputes', 'provinces', 'districts', 'localBodies',
+  'eodReports', 'floatRequests', 'disputes', 'provinces', 'districts', 'localBodies', 'occupations',
 ];
 
 // Same address the app signs in with (lib/api/api_client.dart, _email).
@@ -60,6 +65,13 @@ async function main() {
   await getSecurityRules().releaseFirestoreRulesetFromSource(source);
   console.log('Published firestore.rules.');
 
+  if (process.argv.includes('--reference-only')) {
+    const places = await importLocations(store);
+    const jobs = await importOccupations(store);
+    console.log(`Loaded ${places.districts} districts, ${places.localBodies} municipalities and ${jobs} occupations.`);
+    return;
+  }
+
   if (reset) {
     for (const name of COLLECTIONS) {
       const n = await deleteCollection(db, name);
@@ -76,7 +88,7 @@ async function main() {
     await upsertLogin(getAuth(), doc.id, a.role, a.name);
   }
   console.log(`Logins ready for ${agents.docs.map((d) => d.id).join(', ')} (PIN ${DEMO_PIN} for the demo users).`);
-  console.log('Demo customers and the address lists are loaded.');
+  console.log('Demo customers, the address lists and the occupations are loaded.');
 }
 
 main().then(() => process.exit(0)).catch((err) => {

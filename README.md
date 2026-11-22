@@ -30,7 +30,11 @@ together with a confirmed transaction of exactly that amount.
    npm install
    npm run firebase:setup             # rules + demo logins + demo data + address lists
    npm run firebase:setup -- --reset  # DELETES all FinBridge data first, then the same
+   npm run firebase:setup -- --reference-only  # only rules + master data (address lists,
+                                               # occupations); customers and balances untouched
    ```
+   Master data lives in `backend/reference-data/` (`districts.csv`, `local_bodies.tsv`,
+   `occupations.csv`). After editing a file, run the `--reference-only` command again.
 3. Run the app (section 3). No backend server is needed.
 
 Sections 1 and 2 describe the older Node.js API, which still works with SQLite or Firestore for

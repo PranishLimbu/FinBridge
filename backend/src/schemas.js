@@ -38,6 +38,7 @@ const onboarding = z.object({
     return age >= 16 && age <= 110;
   }, 'Customer must be at least 16 years old'),
   occupation: z.string().trim().min(2).max(60),
+  occupationCode: z.string().trim().max(10).optional(),
   mobile: z.string().regex(/^9[78]\d{8}$/, 'Enter a 10-digit Nepali mobile number starting 97 or 98'),
   citizenshipNo: z.string().trim().regex(/^\d{1,3}(-\d{1,6}){1,4}$/, 'Use the format shown on the certificate, e.g. 27-01-78-04912'),
   citizenshipIssueDateBs: dateStr,

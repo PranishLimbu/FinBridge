@@ -183,7 +183,7 @@ describe('UC5 withdrawal with OTP', () => {
 describe('UC3 onboarding and KYC review', () => {
   const application = {
     firstName: 'Kamala', lastName: 'Rai', gender: 'female', maritalStatus: 'married',
-    dobBs: '2045-02-10', dobAd: '1988-05-23', occupation: 'Teacher', mobile: '9861112233',
+    dobBs: '2045-02-10', dobAd: '1988-05-23', occupationCode: 'EDU', occupation: 'Education and Training', mobile: '9861112233',
     citizenshipNo: '12-03-79-55120', citizenshipIssueDateBs: '2063-04-01', citizenshipIssueDistrict: 'Sindhupanchowk',
     family: { fatherName: 'Dil Bahadur Rai', motherName: 'Sita Rai', grandfatherName: 'Man Bahadur Rai' },
     address: { province: 'Bagmati', district: 'Sindhupanchowk', municipality: 'Melanchi Municipality', ward: 5 },
@@ -227,6 +227,22 @@ describe('UC3 onboarding and KYC review', () => {
     // Renamed bodies replace their old names; duplicates are gone.
     expect(r.body.localBodies.some((l) => l.name === 'Pathibhara Yangwarak Rural Municipality')).toBe(true);
     expect(r.body.localBodies.some((l) => l.name === 'Yangwarak Rural Municipality')).toBe(false);
+  });
+  test('serves the occupation list and only accepts occupations from it', async () => {
+    const t = await login();
+    const r = await request(app).get('/api/occupations').set(auth(t));
+    expect(r.status).toBe(200);
+    expect(r.body.results).toHaveLength(42);
+    expect(r.body.results[0]).toEqual({ code: 'STU', name: 'Student' });
+    expect(r.body.results).toContainEqual({ code: 'AG', name: 'Agriculture, Farming, and Forestry' });
+    const post = (patch) => request(app).post('/api/customers').set(auth(t)).send({ ...application, ...patch });
+    const bad = await post({ occupationCode: 'XYZ' });
+    expect(bad.body.error.details.fields[0].field).toBe('occupationCode');
+    // The name is always stored as the official one for the code.
+    const ok = await post({ citizenshipNo: '12-03-79-55999', mobile: '9861112299', occupationCode: 'it', occupation: 'whatever' });
+    expect(ok.status).toBe(201);
+    const c = await request(app).get(`/api/customers/${ok.body.customerId}`).set(auth(t));
+    expect(c.body).toMatchObject({ occupationCode: 'IT', occupation: 'Information Technology' });
   });
   test('rejects addresses that are not in the location list or do not belong together', async () => {
     const t = await login();

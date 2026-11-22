@@ -2,6 +2,7 @@
 const bcrypt = require('bcryptjs');
 const { nowIso, startOfNepalDay } = require('./utils/helpers');
 const { importLocations } = require('./services/locationService');
+const { importOccupations } = require('./services/occupationService');
 
 const P = (rupees) => rupees * 100;
 const DEMO_BANK = 'Himalaya Partner Bank (fictional)';
@@ -47,7 +48,7 @@ async function seed(store, { log = false } = {}) {
     const c = {
       firstName: first, middleName: middle || undefined, lastName: last,
       nameLower: [first, middle, last].filter(Boolean).join(' ').toLowerCase(),
-      gender, mobile, citizenshipNo: cit, occupation: 'Agriculture / Farmer',
+      gender, mobile, citizenshipNo: cit, occupationCode: 'AG', occupation: 'Agriculture, Farming, and Forestry',
       address: {
         province: 'Bagmati', district: 'Kavreplanchowk', municipality: 'Dhulikhel Municipality', ward: 4, districtId: '26', localBodyId: '313',
       },
@@ -60,9 +61,10 @@ async function seed(store, { log = false } = {}) {
     });
   }
   const places = await importLocations(store);
+  const occupations = await importOccupations(store);
   if (log) {
-    console.log('Seeded 2 agents (PIN 123456), 1 supervisor SUP-001 (PIN 123456), 4 customers.');
-    console.log(`Loaded ${places.districts} districts and ${places.localBodies} municipalities.`);
+    console.log(`Seeded 2 agents (PIN 123456), 1 supervisor SUP-001 (PIN 123456), ${customers.length} customers.`);
+    console.log(`Loaded ${places.districts} districts, ${places.localBodies} municipalities and ${occupations} occupations.`);
   }
 }
 

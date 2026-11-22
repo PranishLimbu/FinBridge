@@ -8,6 +8,7 @@ const customers = require('./services/customerService');
 const txns = require('./services/transactionService');
 const ops = require('./services/agentOpsService');
 const locations = require('./services/locationService');
+const occupations = require('./services/occupationService');
 const { audit } = require('./services/auditService');
 
 const router = express.Router();
@@ -40,6 +41,12 @@ router.post('/auth/change-pin', validate(S.changePin), async (req, res) => {
 router.get('/locations', async (_req, res) => {
   res.set('Cache-Control', 'private, max-age=3600');
   res.json(await locations.getLocations());
+});
+
+// Occupation master data for the onboarding dropdown.
+router.get('/occupations', async (_req, res) => {
+  res.set('Cache-Control', 'private, max-age=3600');
+  res.json({ results: await occupations.getOccupations() });
 });
 
 // ---------------------------------------------------------------- agent

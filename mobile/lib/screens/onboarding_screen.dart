@@ -61,6 +61,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   bool get _useLists => _locs != null && !_locs!.isEmpty;
 
+  // Occupation master data (code + name). Until it loads, the plain text field is used.
+  List<Place>? _occupations;
+  String? _occupationCode, _occupationError;
+
+  bool get _useOccupationList => _occupations != null && _occupations!.isNotEmpty;
+
   static const _provinces = ['Koshi', 'Madhesh', 'Bagmati', 'Gandaki', 'Lumbini', 'Karnali', 'Sudurpashchim'];
   static const _steps = ['Personal', 'Family', 'Address', 'Documents'];
 
@@ -68,6 +74,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void initState() {
     super.initState();
     _loadLocations();
+    _loadOccupations();
+  }
+
+  Future<void> _loadOccupations() async {
+    try {
+      final res = await context.read<Session>().api.get('/occupations') as Map<String, dynamic>;
+      final list = [
+        for (final o in (res['results'] as List).cast<Map<String, dynamic>>())
+          Place(o['code'] as String, o['name'] as String, '', null),
+      ];
+      if (mounted) setState(() => _occupations = list);
+    } on ApiException {/* keep the text field */}
   }
 
   Future<void> _loadLocations() async {
@@ -81,6 +99,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   /// Checks the dropdowns on the current step; they are not form fields, so Form.validate misses them.
   bool _listsValid() {
+    if (_step == 0 && _useOccupationList) {
+      setState(() => _occupationError = _occupationCode == null ? 'Choose an occupation' : null);
+      if (_occupationError != null) {
+        if (_useLists) setState(() => _issueDistrictError = _issueDistrictId == null ? 'Choose the issue district' : null);
+        return false;
+      }
+    }
     if (!_useLists) return true;
     setState(() {
       if (_step == 0) _issueDistrictError = _issueDistrictId == null ? 'Choose the issue district' : null;
@@ -171,7 +196,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'maritalStatus': _marital,
       'dobBs': _dobBs.text.trim(),
       'dobAd': _iso(_dobAd!),
-      'occupation': _occupation.text.trim(),
+      'occupation': _useOccupationList
+          ? _occupations!.firstWhere((o) => o.id == _occupationCode).name
+          : _occupation.text.trim(),
+      if (_useOccupationList) 'occupationCode': _occupationCode,
       'mobile': _mobile.text.trim(),
       'citizenshipNo': _citizenship.text.trim(),
       'citizenshipIssueDateBs': _issueBs.text.trim(),
@@ -368,7 +396,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       : 'AD: ${_iso(_dobAd!)}  •  Age ${_age ?? '-'}'),
                 ),
               ),
-              _field(_occupation, bi('Occupation', 'पेशा'), validator: _req, hint: 'e.g. Agriculture / Farmer'),
+              if (_useOccupationList)
+                _placeMenu(
+                  key: const ValueKey('occupation'),
+                  label: bi('Occupation', 'पेशा'),
+                  places: _occupations!,
+                  selected: _occupationCode,
+                  error: _occupationError,
+                  onSelected: (code) => setState(() {
+                    _occupationCode = code;
+                    _occupationError = null;
+                  }),
+                )
+              else
+                _field(_occupation, bi('Occupation', 'पेशा'), validator: _req, hint: 'e.g. Agriculture / Farmer'),
               _field(_mobile, bi('Mobile number', 'मोबाइल नम्बर'),
                   keyboard: TextInputType.phone,
                   maxLength: 10,

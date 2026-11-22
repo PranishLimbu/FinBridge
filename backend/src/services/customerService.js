@@ -4,6 +4,7 @@ const { AppError, nowIso, maskAccount, maskMobile, maskCitizenship } = require('
 const { paisaToRupees } = require('../utils/money');
 const { audit, auditInTx } = require('./auditService');
 const { resolveAddress } = require('./locationService');
+const { resolveOccupation } = require('./occupationService');
 
 const fullName = (c) => [c.firstName, c.middleName, c.lastName].filter(Boolean).join(' ');
 
@@ -59,7 +60,7 @@ async function search(q) {
 async function getForAgent(customerId) {
   const c = await getStore().get('customers', customerId);
   if (!c) throw new AppError(404, 'CUSTOMER_NOT_FOUND', 'Customer not found');
-  return { ...summary(c, await accountsFor(c.id)), gender: c.gender, occupation: c.occupation, address: c.address };
+  return { ...summary(c, await accountsFor(c.id)), gender: c.gender, occupation: c.occupation, occupationCode: c.occupationCode || null, address: c.address };
 }
 
 // Onboarding (UC3). Creates the customer and a pending savings account in one transaction.
@@ -71,7 +72,8 @@ async function onboard(agentId, input) {
   const mobileDupes = await store.query('customers', { where: [['mobile', '==', input.mobile]] });
   if (mobileDupes.length) throw new AppError(409, 'DUPLICATE_MOBILE', 'This mobile number is already registered');
   const { address, issueDistrict } = await resolveAddress(input.address, input.citizenshipIssueDistrict);
-  input = { ...input, address, citizenshipIssueDistrict: issueDistrict };
+  const job = await resolveOccupation(input.occupationCode, input.occupation);
+  input = { ...input, ...job, address, citizenshipIssueDistrict: issueDistrict };
 
   const customerId = `CUST-${crypto.randomInt(100000, 999999)}`;
   const accountNo = `0102${crypto.randomInt(10000000, 99999999)}`;

@@ -66,6 +66,7 @@ class ApiClient {
 
   Map<String, dynamic>? _me; // the signed-in agent's document
   static Map<String, dynamic>? _locationsCache;
+  static List<Map<String, dynamic>>? _occupationsCache;
 
   Future<dynamic> get(String path, {Map<String, String>? query}) =>
       _run(() => _get(_segments(path), query ?? const {}));
@@ -112,6 +113,8 @@ class ApiClient {
     switch (s) {
       case ['auth', 'me']:
         return {'user': _publicAgent(_uid, await _agentDoc())};
+      case ['occupations']:
+        return {'results': await _occupations()};
       case ['locations']:
         return _locations();
       case ['dashboard']:
@@ -379,6 +382,34 @@ class ApiClient {
     return data;
   }
 
+  // ------------------------------------------------------------------ occupations
+
+  /// Occupation master data: [{code, name}] in the order of backend/reference-data/occupations.csv.
+  Future<List<Map<String, dynamic>>> _occupations() async {
+    if (_occupationsCache != null) return _occupationsCache!;
+    final snap = await _db.collection('occupations').get();
+    final rows = [
+      for (final d in snap.docs)
+        if (d.data()['active'] != false) {'code': d.id, 'name': d.data()['name'], 'order': _int(d.data()['order'])},
+    ]..sort((a, b) => (a['order'] as int).compareTo(b['order'] as int));
+    final list = [for (final r in rows) {'code': r['code'], 'name': r['name']}];
+    if (list.isNotEmpty) _occupationsCache = list;
+    return list;
+  }
+
+  /// The official code and name for the chosen occupation (by code, or by exact name).
+  Future<({String? code, String name})> _resolveOccupation(String? code, String name) async {
+    final list = await _occupations();
+    if (list.isEmpty) return (code: code, name: name);
+    final wanted = code?.trim().toUpperCase();
+    final found = list.where((o) => wanted != null && wanted.isNotEmpty && o['code'] == wanted).firstOrNull ??
+        list.where((o) => (wanted == null || wanted.isEmpty) && '${o['name']}'.toLowerCase() == name.toLowerCase()).firstOrNull;
+    if (found == null) {
+      throw _invalid(wanted == null || wanted.isEmpty ? 'occupation' : 'occupationCode', 'Choose an occupation from the list');
+    }
+    return (code: found['code'] as String, name: found['name'] as String);
+  }
+
   /// Checks the address against the location lists and returns the official names and IDs.
   Future<({Map<String, dynamic> address, String issueDistrict})> _resolveAddress(
       Map<String, dynamic> address, String issueDistrict) async {
@@ -475,6 +506,7 @@ class ApiClient {
       ..._summary(id, c, await _accountsFor(id)),
       'gender': c['gender'],
       'occupation': c['occupation'],
+      'occupationCode': c['occupationCode'],
       'address': c['address'],
     };
   }
@@ -515,7 +547,9 @@ class ApiClient {
     final age = dob == null ? 0 : DateTime.now().difference(dob).inDays / 365.25;
     if (age < 16 || age > 110) throw _invalid('dobAd', 'Customer must be at least 16 years old');
     final occupation = str('occupation', b);
-    if (occupation.length < 2 || occupation.length > 60) throw _invalid('occupation', 'Enter the occupation');
+    if ('${b['occupationCode'] ?? ''}'.trim().isEmpty && (occupation.length < 2 || occupation.length > 60)) {
+      throw _invalid('occupation', 'Choose an occupation');
+    }
     final mobile = str('mobile', b);
     if (!RegExp(r'^9[78]\d{8}$').hasMatch(mobile)) {
       throw _invalid('mobile', 'Enter a 10-digit Nepali mobile number starting 97 or 98');
@@ -575,6 +609,8 @@ class ApiClient {
   Future<Map<String, dynamic>> _onboard(Map<String, dynamic> b) async {
     final agentId = _uid;
     var input = _validateOnboarding(b);
+    final job = await _resolveOccupation(b['occupationCode'] as String?, input['occupation'] as String);
+    input = {...input, 'occupation': job.name, if (job.code != null) 'occupationCode': job.code};
     final customers = _db.collection('customers');
     if ((await customers.where('citizenshipNo', isEqualTo: input['citizenshipNo']).limit(1).get()).docs.isNotEmpty) {
       throw ApiException('DUPLICATE_CITIZENSHIP', 'A customer with this citizenship number already exists', status: 409);
