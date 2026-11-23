@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:nepali_utils/nepali_utils.dart';
 
+import '../l10n/l10n.dart';
 import '../theme.dart';
 import '../utils/bs_date.dart';
-
-const _bsMonths = [
-  'Baisakh (बैशाख)', 'Jestha (जेठ)', 'Asar (असार)', 'Shrawan (साउन)', 'Bhadra (भदौ)', 'Asoj (असोज)',
-  'Kartik (कार्तिक)', 'Mangsir (मंसिर)', 'Poush (पुस)', 'Magh (माघ)', 'Falgun (फागुन)', 'Chaitra (चैत)',
-];
 
 /// Shows a Bikram Sambat (BS) date picker: year, month and day lists, with the real number of
 /// days in each Nepali month and the matching AD date underneath. Returns null on cancel.
@@ -16,7 +12,7 @@ Future<NepaliDateTime?> showBsDatePicker({
   required NepaliDateTime firstDate,
   required NepaliDateTime lastDate,
   NepaliDateTime? initialDate,
-  String title = 'Choose date (BS)',
+  String? title,
 }) =>
     showDialog<NepaliDateTime>(
       context: context,
@@ -24,7 +20,7 @@ Future<NepaliDateTime?> showBsDatePicker({
         first: _dateOnly(firstDate),
         last: _dateOnly(lastDate),
         initial: _dateOnly(initialDate ?? lastDate),
-        title: title,
+        title: title ?? context.l10n.chooseDateBs,
       ),
     );
 
@@ -91,6 +87,8 @@ class _BsDateDialogState extends State<_BsDateDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final months = l10n.bsMonths;
     final years = [for (var y = widget.last.year; y >= widget.first.year; y--) y]; // newest first
     return AlertDialog(
       title: Text(widget.title),
@@ -100,21 +98,20 @@ class _BsDateDialogState extends State<_BsDateDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _dropdown('Year (साल)', _year, years, (y) => '$y', (y) => _year = y),
-            _dropdown('Month (महिना)', _month, [for (var m = _firstMonth; m <= _lastMonth; m++) m],
-                (m) => _bsMonths[m - 1], (m) => _month = m),
-            _dropdown('Day (गते)', _day, [for (var d = _firstDay; d <= _lastDay; d++) d], (d) => '$d', (d) => _day = d),
+            _dropdown(l10n.bsYear, _year, years, (y) => '$y', (y) => _year = y),
+            _dropdown(l10n.bsMonth, _month, [for (var m = _firstMonth; m <= _lastMonth; m++) m],
+                (m) => months[m - 1], (m) => _month = m),
+            _dropdown(l10n.bsDay, _day, [for (var d = _firstDay; d <= _lastDay; d++) d], (d) => '$d', (d) => _day = d),
             Text(
-              'BS ${_year.toString().padLeft(4, '0')}-${_month.toString().padLeft(2, '0')}-${_day.toString().padLeft(2, '0')}'
-              '  =  AD ${_ad(bsToAd(_selected))}',
+              l10n.bsEqualsAd(formatBs(_selected), _ad(bsToAd(_selected))),
               style: const TextStyle(fontSize: 13, color: FbColors.textMuted),
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, _selected), child: const Text('OK')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
+        FilledButton(onPressed: () => Navigator.pop(context, _selected), child: Text(l10n.ok)),
       ],
     );
   }

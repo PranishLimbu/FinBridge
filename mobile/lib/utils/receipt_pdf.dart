@@ -3,14 +3,19 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import 'package:flutter/widgets.dart' show Locale;
+
 import '../api/models.dart';
+import '../l10n/app_localizations.dart';
 import 'format.dart';
 
 /// 80 mm till-roll page: 80 mm wide with 4 mm side margins. Height grows with the content.
 const _rollFormat = PdfPageFormat(80 * PdfPageFormat.mm, double.infinity, marginAll: 4 * PdfPageFormat.mm);
 
-/// Builds the printable receipt (English, monospace) for a confirmed transaction.
+/// Builds the printable receipt for a confirmed transaction. Always English: the monospace
+/// receipt-printer font has no Devanagari letters. Text comes from lib/l10n/app_en.arb.
 Future<Uint8List> buildReceiptPdf(Txn t) async {
+  final s = lookupAppLocalizations(const Locale('en'));
   final regular = pw.Font.courier();
   final bold = pw.Font.courierBold();
   pw.TextStyle style({bool isBold = false, double size = 9}) =>
@@ -41,17 +46,17 @@ Future<Uint8List> buildReceiptPdf(Txn t) async {
       );
 
   final agent = t.agent;
-  final title = t.isDeposit ? 'CASH DEPOSIT' : 'CASH WITHDRAWAL';
+  final title = t.isDeposit ? s.pdfCashDeposit : s.pdfCashWithdrawal;
   final location = '${agent['location'] ?? ''}';
 
-  final doc = pw.Document(title: 'Receipt ${t.reference}', author: 'FinBridge');
+  final doc = pw.Document(title: s.pdfTitle(t.reference), author: s.logoName);
   doc.addPage(
     pw.Page(
       pageFormat: _rollFormat,
       build: (_) => pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         children: [
-          center('FINBRIDGE AGENT BANKING', isBold: true, size: 12),
+          center(s.pdfHeader, isBold: true, size: 12),
           if (t.partnerBank.isNotEmpty) center(t.partnerBank),
           if (location.isNotEmpty) center(location, size: 8),
           rule(dashed: false),
@@ -59,31 +64,30 @@ Future<Uint8List> buildReceiptPdf(Txn t) async {
           pw.SizedBox(height: 3),
           center(formatNpr(t.total), isBold: true, size: 15),
           rule(),
-          row('Customer:', t.customerName),
-          row('Account:', t.accountMasked.replaceAll('•', '*')),
+          row(s.pdfCustomer, t.customerName),
+          row(s.pdfAccount, t.accountMasked.replaceAll('•', '*')),
           rule(),
-          row('Date:', formatNepalTime(t.confirmedAt ?? t.createdAt)),
-          row('Agent:', '${agent['name'] ?? ''}'),
-          row('Agent ID:', '${agent['agentId'] ?? ''}'),
-          row('Ref #:', t.reference),
+          row(s.pdfDate, formatNepalTime(t.confirmedAt ?? t.createdAt)),
+          row(s.pdfAgent, '${agent['name'] ?? ''}'),
+          row(s.pdfAgentId, '${agent['agentId'] ?? ''}'),
+          row(s.pdfReference, t.reference),
           rule(),
-          center('${title.split(' ').last} DETAILS', isBold: true),
+          center(t.isDeposit ? s.pdfDepositDetails : s.pdfWithdrawalDetails, isBold: true),
           pw.SizedBox(height: 2),
-          row(t.isDeposit ? 'Cash deposited:' : 'Cash paid out:', formatNpr(t.amount)),
-          row('Service fee:', formatNpr(t.fee)),
-          row('${t.totalLabel}:', formatNpr(t.total), isBold: true),
+          row(t.isDeposit ? s.pdfCashDeposited : s.pdfCashPaidOut, formatNpr(t.amount)),
+          row(s.pdfServiceFee, formatNpr(t.fee)),
+          row(t.isDeposit ? s.pdfTotalCredited : s.pdfTotalDebited, formatNpr(t.total), isBold: true),
           pw.SizedBox(height: 2),
-          pw.Text('In words: ${t.amountInWords}', style: style(size: 8)),
+          pw.Text(s.inWords(t.amountInWords), style: style(size: 8)),
           if (t.balanceBefore != null && t.balanceAfter != null) ...[
             rule(),
-            row('Prior Balance:', formatNpr(t.balanceBefore!), isBold: true),
-            row('New Balance:', formatNpr(t.balanceAfter!), isBold: true),
+            row(s.pdfPriorBalance, formatNpr(t.balanceBefore!), isBold: true),
+            row(s.pdfNewBalance, formatNpr(t.balanceAfter!), isBold: true),
           ],
           rule(),
-          center('Simulated receipt for an academic', size: 7),
-          center('prototype. Not a real bank voucher.', size: 7),
+          center(s.pdfFooter, size: 7),
           pw.SizedBox(height: 4),
-          center('Thank you', size: 8),
+          center(s.pdfThankYou, size: 8),
         ],
       ),
     ),

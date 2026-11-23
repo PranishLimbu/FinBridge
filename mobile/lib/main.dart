@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
+import 'l10n/l10n.dart';
 import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
 import 'screens/supervisor_screen.dart';
@@ -33,9 +35,17 @@ class FinBridgeApp extends StatelessWidget {
       // Any touch resets the 5-minute idle timer.
       onPointerDown: (_) => session.touch(),
       child: MaterialApp(
-        title: 'FinBridge Agent',
+        onGenerateTitle: (context) => context.l10n.appTitle,
         debugShowCheckedModeBanner: false,
         theme: buildTheme(),
+        locale: session.locale,
+        supportedLocales: Session.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         // Rebuilding with a new key on login/logout clears every pushed screen.
         home: !session.isLoggedIn
             ? const LoginScreen()

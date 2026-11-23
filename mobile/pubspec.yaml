@@ -13,10 +13,14 @@ dependencies:
   firebase_core: ^5.2.0
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
   nepali_utils: ^3.0.8
   pdf: ^3.13.1
   printing: ^5.15.1
   provider: ^6.1.2
+  shared_preferences: ^2.5.6
 
 dev_dependencies:
   flutter_test:
@@ -25,3 +29,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # All on-screen text lives in lib/l10n/*.arb; Flutter generates AppLocalizations from them.
+  generate: true

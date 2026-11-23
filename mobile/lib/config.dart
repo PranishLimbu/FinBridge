@@ -9,4 +9,7 @@ class AppConfig {
   static const double maxAmount = 25000;
   static const double withdrawalFee = 10;
   static const double depositFee = 0;
+
+  /// Amounts on the quick-add buttons of the cash screens, in rupees.
+  static const List<int> quickAmounts = [1000, 2000, 5000, 10000];
 }

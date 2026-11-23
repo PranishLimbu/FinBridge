@@ -7,7 +7,20 @@ const { importOccupations } = require('./services/occupationService');
 const P = (rupees) => rupees * 100;
 const DEMO_BANK = 'Himalaya Partner Bank (fictional)';
 
+// Agent counters. Each agent's profile names its terminal (agents/{id}.terminalId); the app
+// shows the terminal's name from here instead of a list built into the app.
+const TERMINALS = [
+  { id: 'KTM-WARD-32', name: 'Koteshwor Point, Ward 32', district: 'Kathmandu', agentId: 'AGT-98412', active: true },
+  { id: 'KAV-DHU-01', name: 'Dhulikhel Bazaar', district: 'Kavreplanchowk', agentId: 'AGT-77020', active: true },
+];
+
+async function seedTerminals(store) {
+  for (const { id, ...t } of TERMINALS) await store.set('terminals', id, t);
+  return TERMINALS.length;
+}
+
 async function seed(store, { log = false } = {}) {
+  await seedTerminals(store);
   const pinHash = await bcrypt.hash('123456', 10);
 
   const agents = [
@@ -68,4 +81,4 @@ async function seed(store, { log = false } = {}) {
   }
 }
 
-module.exports = { seed, DEMO_BANK };
+module.exports = { seed, seedTerminals, DEMO_BANK };

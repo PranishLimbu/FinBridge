@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../api/models.dart';
+import '../l10n/l10n.dart';
 import '../state/session.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -43,6 +44,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
   }
 
   Future<void> _search() async {
+    final l10n = context.l10n;
     final q = _query.text.trim();
     if (q.length < 2) {
       setState(() {
@@ -62,7 +64,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
         _searched = true;
       });
     } on ApiException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _error = l10n.error(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -73,6 +75,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
       Navigator.of(context).pop(c);
       return;
     }
+    final l10n = context.l10n;
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -85,19 +88,19 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
             children: [
               Text(c.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
               const SizedBox(height: 4),
-              Text('${c.id} • ${c.mobileMasked} • Citizenship ${c.citizenshipMasked}',
+              Text('${c.id} • ${c.mobileMasked} • ${l10n.citizenshipMasked(c.citizenshipMasked)}',
                   style: const TextStyle(color: FbColors.textMuted)),
               const SizedBox(height: 8),
               Align(alignment: Alignment.centerLeft, child: StatusChip(c.kycStatus)),
               const SizedBox(height: 8),
-              for (final a in c.accounts) InfoRow(a.productName, '${a.masked} (${a.status})'),
+              for (final a in c.accounts) InfoRow(a.productName, '${a.masked} (${l10n.status(a.status)})'),
               const SizedBox(height: 12),
               if (!c.verified)
-                const MessageBox('KYC not verified yet. Cash transactions are not allowed.')
+                MessageBox(l10n.kycNotVerified)
               else ...[
                 FilledButton.icon(
                   icon: const Icon(Icons.south_west),
-                  label: const Text('Cash deposit'),
+                  label: Text(l10n.cashDeposit),
                   onPressed: () {
                     Navigator.pop(ctx);
                     Navigator.of(context).push(MaterialPageRoute(
@@ -107,7 +110,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
                   icon: const Icon(Icons.north_east),
-                  label: const Text('Cash withdrawal'),
+                  label: Text(l10n.cashWithdrawal),
                   onPressed: () {
                     Navigator.pop(ctx);
                     Navigator.of(context).push(MaterialPageRoute(
@@ -124,13 +127,14 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.pickMode ? 'Step 1: Find customer' : 'Customers'),
+        title: Text(widget.pickMode ? l10n.findCustomerStepTitle : l10n.customersTitle),
         leading: widget.pickMode
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
-                tooltip: 'Back',
+                tooltip: l10n.back,
                 onPressed: () => Navigator.of(context).pop(),
               )
             : null,
@@ -141,12 +145,11 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
               backgroundColor: FbColors.primary,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.person_add_alt),
-              label: const Text('New customer'),
+              label: Text(l10n.newCustomer),
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OnboardingScreen())),
             ),
       body: Column(
         children: [
-          const SimulatedBanner(),
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -156,12 +159,12 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
               onSubmitted: (_) => _search(),
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.search),
-                labelText: 'Mobile, account, citizenship no. or name',
+                labelText: l10n.searchHint,
                 suffixIcon: _query.text.isEmpty
                     ? null
                     : IconButton(
                         icon: const Icon(Icons.clear),
-                        tooltip: 'Clear',
+                        tooltip: l10n.clear,
                         onPressed: () {
                           _query.clear();
                           _search();
@@ -178,9 +181,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(24),
                       child: Text(
-                        _searched
-                            ? 'No customer found.'
-                            : 'Search by mobile, account, citizenship no. or name.',
+                        _searched ? l10n.noCustomerFound : l10n.searchPrompt,
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: FbColors.textMuted),
                       ),

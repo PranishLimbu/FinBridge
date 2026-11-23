@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import 'customer_search_screen.dart';
 import 'dashboard_screen.dart';
 import 'journal_screen.dart';
@@ -26,6 +27,7 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final pages = [
       DashboardScreen(key: _dashboardKey, onOpenTab: _go),
       const CustomerSearchScreen(),
@@ -37,11 +39,11 @@ class _HomeShellState extends State<HomeShell> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: _go,
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.point_of_sale), label: 'Counter'),
-          NavigationDestination(icon: Icon(Icons.people_alt_outlined), label: 'Customers'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'Journal'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Terminal'),
+        destinations: [
+          NavigationDestination(icon: const Icon(Icons.point_of_sale), label: l10n.tabCounter),
+          NavigationDestination(icon: const Icon(Icons.people_alt_outlined), label: l10n.tabCustomers),
+          NavigationDestination(icon: const Icon(Icons.receipt_long_outlined), label: l10n.tabJournal),
+          NavigationDestination(icon: const Icon(Icons.settings_outlined), label: l10n.tabTerminal),
         ],
       ),
     );

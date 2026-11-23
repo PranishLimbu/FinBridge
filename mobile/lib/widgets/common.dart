@@ -1,25 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../theme.dart';
-
-/// Red strip shown on every screen so nobody mistakes the prototype for a real service (NFR-10).
-class SimulatedBanner extends StatelessWidget {
-  const SimulatedBanner({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: FbColors.danger,
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: const Text(
-        'DEMO – NO REAL MONEY',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5),
-      ),
-    );
-  }
-}
 
 /// FinBridge logo: navy tile with a bridge icon, the name, and "AGENT BANKING" in mint.
 class FbLogo extends StatelessWidget {
@@ -45,10 +27,10 @@ class FbLogo extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('FinBridge',
+            Text(context.l10n.logoName,
                 style: TextStyle(
                     fontSize: compact ? 15 : 22, fontWeight: FontWeight.w800, color: FbColors.primary, height: 1.1)),
-            Text('AGENT BANKING',
+            Text(context.l10n.logoTagline,
                 style: TextStyle(
                     fontSize: compact ? 8 : 10,
                     fontWeight: FontWeight.w700,
@@ -121,10 +103,11 @@ class StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, fg, bg) = switch (status) {
-      'confirmed' || 'verified' || 'active' || 'balanced' => (_label(status), FbColors.success, FbColors.successBg),
-      'awaiting_otp' || 'pending_review' || 'pending' => (_label(status), FbColors.warning, FbColors.warningBg),
-      _ => (_label(status), FbColors.danger, FbColors.dangerBg),
+    final label = context.l10n.status(status);
+    final (fg, bg) = switch (status) {
+      'confirmed' || 'verified' || 'active' || 'balanced' => (FbColors.success, FbColors.successBg),
+      'awaiting_otp' || 'pending_review' || 'pending' => (FbColors.warning, FbColors.warningBg),
+      _ => (FbColors.danger, FbColors.dangerBg),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -132,21 +115,6 @@ class StatusChip extends StatelessWidget {
       child: Text(label, style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w600)),
     );
   }
-
-  static String _label(String s) => switch (s) {
-        'confirmed' => 'Confirmed',
-        'awaiting_otp' => 'Pending OTP',
-        'pending_review' => 'KYC pending',
-        'verified' => 'KYC verified',
-        'rejected' => 'KYC rejected',
-        'pending' => 'Pending',
-        'active' => 'Active',
-        'cancelled' => 'Cancelled',
-        'failed' => 'Failed',
-        'balanced' => 'Balanced',
-        'mismatch' => 'Mismatch',
-        _ => s,
-      };
 }
 
 class MessageBox extends StatelessWidget {
@@ -177,8 +145,6 @@ class MessageBox extends StatelessWidget {
   }
 }
 
-/// Label with a Nepali translation underneath, e.g. "First name (पहिलो नाम)".
-String bi(String en, String ne) => '$en ($ne)';
 
 class InfoRow extends StatelessWidget {
   const InfoRow(this.label, this.value, {super.key, this.bold = false});
@@ -234,7 +200,7 @@ class AmountKeypad extends StatelessWidget {
               onTap: () => onKey(k),
               child: Center(
                 child: k == '<'
-                    ? const Icon(Icons.backspace_outlined, semanticLabel: 'Delete')
+                    ? Icon(Icons.backspace_outlined, semanticLabel: context.l10n.deleteKey)
                     : Text(k,
                         style: TextStyle(
                             fontSize: 22,
