@@ -23,21 +23,22 @@ class FbLogo extends StatelessWidget {
           child: Icon(Icons.account_balance, color: FbColors.accent, size: tile * 0.55),
         ),
         SizedBox(width: compact ? 8 : 10),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(context.l10n.logoName,
-                style: TextStyle(
-                    fontSize: compact ? 15 : 22, fontWeight: FontWeight.w800, color: FbColors.primary, height: 1.1)),
-            Text(context.l10n.logoTagline,
-                style: TextStyle(
-                    fontSize: compact ? 8 : 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    color: FbColors.accentDark)),
-          ],
-        ),
+        if (compact)
+          Text(context.l10n.logoName,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: FbColors.primary))
+        else
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(context.l10n.logoName,
+                  style: const TextStyle(
+                      fontSize: 22, fontWeight: FontWeight.w800, color: FbColors.primary, height: 1.1)),
+              Text(context.l10n.logoTagline,
+                  style: const TextStyle(
+                      fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: FbColors.accentDark)),
+            ],
+          ),
       ],
     );
   }

@@ -2341,6 +2341,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This application has already been reviewed'**
   String get errNotPending;
+
+  /// No description provided for @notificationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notificationsTitle;
+
+  /// No description provided for @allCaughtUp.
+  ///
+  /// In en, this message translates to:
+  /// **'You’re all caught up.'**
+  String get allCaughtUp;
+
+  /// No description provided for @sendGetCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Send / get cash'**
+  String get sendGetCash;
+
+  /// No description provided for @cashInHandLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash in hand'**
+  String get cashInHandLabel;
+
+  /// No description provided for @limitUsedOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% of {limit} limit'**
+  String limitUsedOf(String percent, String limit);
 }
 
 class _AppLocalizationsDelegate

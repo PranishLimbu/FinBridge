@@ -520,10 +520,21 @@ class ApiClient {
     if (c == null) throw ApiException('CUSTOMER_NOT_FOUND', 'Customer not found', status: 404);
     return {
       ..._summary(id, c, await _accountsFor(id)),
+      'firstName': c['firstName'],
+      'middleName': c['middleName'] ?? '',
+      'lastName': c['lastName'],
       'gender': c['gender'],
+      'maritalStatus': c['maritalStatus'],
+      'dobBs': c['dobBs'],
+      'dobAd': c['dobAd'],
       'occupation': c['occupation'],
       'occupationCode': c['occupationCode'],
+      'citizenshipIssueDateBs': c['citizenshipIssueDateBs'],
+      'citizenshipIssueDistrict': c['citizenshipIssueDistrict'],
+      'pan': c['pan'],
+      'family': c['family'] ?? {},
       'address': c['address'],
+      'createdAt': c['createdAt']?.toString(),
     };
   }
 

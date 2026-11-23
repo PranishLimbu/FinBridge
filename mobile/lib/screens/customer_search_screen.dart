@@ -10,6 +10,7 @@ import '../state/session.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import 'cash_transaction_screen.dart';
+import 'customer_details_screen.dart';
 import 'onboarding_screen.dart';
 
 /// UC2 Look up customer. Used as the Customers tab, and as a picker when [pickMode] is true
@@ -86,7 +87,20 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(c.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+              Row(
+                children: [
+                  Expanded(child: Text(c.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700))),
+                  IconButton(
+                    icon: const Icon(Icons.visibility_outlined),
+                    tooltip: 'View details',
+                    color: FbColors.primary,
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => CustomerDetailsScreen(customer: c)));
+                    },
+                  ),
+                ],
+              ),
               const SizedBox(height: 4),
               Text('${c.id} • ${c.mobileMasked} • ${l10n.citizenshipMasked(c.citizenshipMasked)}',
                   style: const TextStyle(color: FbColors.textMuted)),

@@ -391,5 +391,10 @@
   "errEodAlreadySubmitted": "आजको दिनको अन्त्यको रिपोर्ट पहिल्यै पठाइसकियो",
   "errInvalidPin": "हालको पिन मिलेन",
   "errSamePin": "नयाँ पिन फरक हुनुपर्छ",
-  "errNotPending": "यो आवेदन पहिल्यै जाँच भइसक्यो"
+  "errNotPending": "यो आवेदन पहिल्यै जाँच भइसक्यो",
+  "notificationsTitle": "सूचनाहरू",
+  "allCaughtUp": "सबै हेरिसकियो।",
+  "sendGetCash": "नगद पठाउनुहोस् / लिनुहोस्",
+  "cashInHandLabel": "हातमा नगद",
+  "limitUsedOf": "{limit} सीमाको {percent}%"
 }

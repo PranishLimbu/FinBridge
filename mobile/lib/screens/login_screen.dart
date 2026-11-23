@@ -71,11 +71,18 @@ class _LoginScreenState extends State<LoginScreen> {
     };
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
           padding: const EdgeInsets.all(20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight - 40),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
           child: Form(
             key: _form,
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Align(alignment: Alignment.centerRight, child: LanguageSwitch()),
@@ -141,8 +148,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           validator: (v) => RegExp(r'^\d{6}$').hasMatch(v ?? '') ? null : l10n.pinSixDigits,
                           onFieldSubmitted: (_) => _submit(),
                         ),
-                        const SizedBox(height: 8),
-                        Text(l10n.neverSharePin, style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
                         const SizedBox(height: 16),
                         if (_error != null) ...[MessageBox(_error!), const SizedBox(height: 12)],
                         FilledButton.icon(
@@ -164,6 +169,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
               ],
             ),
+          ),
+              ),
+            ),
+          ),
           ),
         ),
       ),

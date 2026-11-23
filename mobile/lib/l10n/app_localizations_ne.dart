@@ -1270,4 +1270,21 @@ class AppLocalizationsNe extends AppLocalizations {
 
   @override
   String get errNotPending => 'यो आवेदन पहिल्यै जाँच भइसक्यो';
+
+  @override
+  String get notificationsTitle => 'सूचनाहरू';
+
+  @override
+  String get allCaughtUp => 'सबै हेरिसकियो।';
+
+  @override
+  String get sendGetCash => 'नगद पठाउनुहोस् / लिनुहोस्';
+
+  @override
+  String get cashInHandLabel => 'हातमा नगद';
+
+  @override
+  String limitUsedOf(String percent, String limit) {
+    return '$limit सीमाको $percent%';
+  }
 }

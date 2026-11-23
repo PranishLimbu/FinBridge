@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
@@ -29,7 +30,9 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
   CustomerSummary? _customer;
   Account? _account;
   String _digits = '';
+  final _amountCtl = TextEditingController();
   int _step = 0;
+  int _firstStep = 0;
   double? _floatCash;
   bool _busy = false;
   String? _error;
@@ -46,8 +49,18 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.customer != null) _selectCustomer(widget.customer!);
+    if (widget.customer != null) {
+      _selectCustomer(widget.customer!);
+      // Opened from a customer's profile: back from the first step leaves this screen.
+      _firstStep = _step;
+    }
     _loadFloat();
+  }
+
+  @override
+  void dispose() {
+    _amountCtl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadFloat() async {
@@ -78,15 +91,10 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
     return null;
   }
 
-  void _key(String k) {
+  void _onAmountChanged(String v) {
     setState(() {
-      if (k == 'C') {
-        _digits = '';
-      } else if (k == '<') {
-        if (_digits.isNotEmpty) _digits = _digits.substring(0, _digits.length - 1);
-      } else if (_digits.length < 6 && !(_digits.isEmpty && k == '0')) {
-        _digits += k;
-      }
+      // No leading zeros.
+      _digits = v.replaceFirst(RegExp(r'^0+'), '');
     });
   }
 
@@ -140,7 +148,7 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
 
   void _stepBack() {
     if (_busy) return;
-    if (_step > 0) {
+    if (_step > _firstStep) {
       setState(() {
         if (_step == 2 && _customer != null && _customer!.accounts.where((a) => a.isActive).length == 1) {
           _step = 0;
@@ -158,7 +166,7 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return PopScope(
-      canPop: !_busy && _step == 0,
+      canPop: !_busy && _step <= _firstStep,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _stepBack();
       },
@@ -360,25 +368,17 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
               ),
             ]),
             const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(formatNpr(_amount).replaceAll('.00', ''),
-                        style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w800, color: FbColors.primary)),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: FbColors.primaryLight, borderRadius: BorderRadius.circular(6)),
-                  child: Text(l10n.currencyCode,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: FbColors.textMuted)),
-                ),
-              ],
+            TextField(
+              controller: _amountCtl,
+              onChanged: _onAmountChanged,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: FbColors.primary),
+              decoration: InputDecoration(labelText: '${l10n.amount} (${l10n.currencyCode})', hintText: '0', prefixText: 'Rs '),
+              onSubmitted: (_) {
+                if (_amount > 0 && amountError == null) _toReview();
+              },
             ),
             const SizedBox(height: 8),
             // Amount in words lets agent and customer check for keying errors (FR-6).
@@ -399,37 +399,6 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
             if (amountError != null) ...[const SizedBox(height: 8), MessageBox(amountError)],
           ],
         ),
-      ),
-      const SizedBox(height: 14),
-      Text(l10n.quickAdd, style: const TextStyle(fontSize: 12, letterSpacing: 1, color: FbColors.textMuted)),
-      const SizedBox(height: 6),
-      Row(
-        children: [
-          for (final v in AppConfig.quickAmounts)
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
-                child: Material(
-                  color: FbColors.primaryLight,
-                  borderRadius: BorderRadius.circular(12),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => setState(() => _digits = (_amount + v).toInt().toString()),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text('+${formatNpr(v).replaceAll('.00', '')}',
-                              style: const TextStyle(fontWeight: FontWeight.w700, color: FbColors.primary)),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
       ),
       const SizedBox(height: 14),
       SectionCard(
@@ -473,8 +442,6 @@ class _CashTransactionScreenState extends State<CashTransactionScreen> {
           ],
         ]),
       ),
-      const SizedBox(height: 12),
-      AmountKeypad(onKey: _key),
       const SizedBox(height: 12),
       FilledButton(
         onPressed: _amount > 0 && amountError == null ? _toReview : null,

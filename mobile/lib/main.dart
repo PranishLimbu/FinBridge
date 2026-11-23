@@ -8,6 +8,7 @@ import 'firebase_options.dart';
 import 'l10n/l10n.dart';
 import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
+import 'screens/splash_screen.dart';
 import 'screens/supervisor_screen.dart';
 import 'state/session.dart';
 import 'theme.dart';
@@ -25,8 +26,23 @@ Future<void> main() async {
   );
 }
 
-class FinBridgeApp extends StatelessWidget {
+class FinBridgeApp extends StatefulWidget {
   const FinBridgeApp({super.key});
+
+  @override
+  State<FinBridgeApp> createState() => _FinBridgeAppState();
+}
+
+class _FinBridgeAppState extends State<FinBridgeApp> {
+  bool _splashDone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 2200), () {
+      if (mounted) setState(() => _splashDone = true);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +63,9 @@ class FinBridgeApp extends StatelessWidget {
           GlobalCupertinoLocalizations.delegate,
         ],
         // Rebuilding with a new key on login/logout clears every pushed screen.
-        home: !session.isLoggedIn
+        home: !_splashDone
+            ? const SplashScreen()
+            : !session.isLoggedIn
             ? const LoginScreen()
             : session.agent!.role == 'supervisor'
                 ? SupervisorScreen(key: ValueKey(session.agent!.id))
