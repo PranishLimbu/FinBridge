@@ -50,6 +50,8 @@ extension AppLocalizationsX on AppLocalizations {
         'INVALID_PIN' => errInvalidPin,
         'SAME_PIN' => errSamePin,
         'NOT_PENDING' => errNotPending,
+        'KYC_NOT_OPENED' => errKycNotOpened,
+        'UNDER_AGE' => minAge16,
         _ => e.message,
       };
 

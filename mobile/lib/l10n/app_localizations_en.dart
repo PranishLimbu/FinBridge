@@ -1297,4 +1297,88 @@ class AppLocalizationsEn extends AppLocalizations {
   String limitUsedOf(String percent, String limit) {
     return '$percent% of $limit limit';
   }
+
+  @override
+  String get customerDetailsTitle => 'Customer details';
+
+  @override
+  String get viewDetails => 'View details';
+
+  @override
+  String get personalInformation => 'Personal information';
+
+  @override
+  String get identity => 'Identity';
+
+  @override
+  String get middleName => 'Middle name';
+
+  @override
+  String get mobile => 'Mobile';
+
+  @override
+  String get pan => 'PAN';
+
+  @override
+  String get father => 'Father';
+
+  @override
+  String get mother => 'Mother';
+
+  @override
+  String get grandfather => 'Grandfather';
+
+  @override
+  String get spouse => 'Spouse';
+
+  @override
+  String get ward => 'Ward';
+
+  @override
+  String wardNumber(String number) {
+    return 'Ward $number';
+  }
+
+  @override
+  String get tole => 'Tole';
+
+  @override
+  String get fullAddress => 'Full address';
+
+  @override
+  String get accounts => 'Accounts';
+
+  @override
+  String get noAccounts => 'No accounts';
+
+  @override
+  String get reviewApplication => 'Review';
+
+  @override
+  String get reviewApplicationTitle => 'Review application';
+
+  @override
+  String get decision => 'Decision';
+
+  @override
+  String get reviewCheckFirst =>
+      'Check the customer’s details and documents above, then approve or reject.';
+
+  @override
+  String get reviewChecked =>
+      'I have checked the customer’s details and documents';
+
+  @override
+  String get docNoFile =>
+      'Checked by the agent at onboarding. No scan uploaded yet.';
+
+  @override
+  String get docMissing => 'Not provided';
+
+  @override
+  String get docLoadError => 'Couldn’t load this file';
+
+  @override
+  String get errKycNotOpened =>
+      'Open the application and check the details and documents first';
 }

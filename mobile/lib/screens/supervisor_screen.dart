@@ -8,6 +8,7 @@ import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
 import '../widgets/language_switch.dart';
+import 'customer_details_screen.dart';
 
 /// Home screen for the bank supervisor: approve onboarding (KYC), decide cash rebalance
 /// requests and unlock agents locked out by wrong PINs.
@@ -60,56 +61,15 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
     if (mounted) setState(() => _busy = false);
   }
 
-  void _kyc(String id, String name, bool approve) async {
-    final l10n = context.l10n;
-    String? reason;
-    if (!approve) {
-      reason = await _askReason(name);
-      if (reason == null) return;
-    }
-    await _act(
-      () => _api.post('/supervisor/customers/$id/kyc', {
-        'decision': approve ? 'approve' : 'reject',
-        if (reason != null) 'reason': reason,
-      }),
-      approve ? l10n.approvedActive(name) : l10n.rejectedName(name),
+  /// Opens the application. Approve and reject live on that page, after the customer's
+  /// details and documents; it returns the outcome message once a decision is made.
+  Future<void> _review(String customerId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final outcome = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => CustomerDetailsScreen(customerId: customerId, review: true)),
     );
-  }
-
-  Future<String?> _askReason(String name) {
-    final l10n = context.l10n;
-    final ctrl = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) {
-        String? error;
-        return StatefulBuilder(
-          builder: (ctx, setState) => AlertDialog(
-            title: Text(l10n.rejectName(name)),
-            content: TextField(
-              controller: ctrl,
-              autofocus: true,
-              maxLength: 300,
-              decoration: InputDecoration(labelText: l10n.reason, errorText: error),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: FbColors.danger),
-                onPressed: () {
-                  if (ctrl.text.trim().length < 5) {
-                    setState(() => error = l10n.atLeastFiveChars);
-                    return;
-                  }
-                  Navigator.pop(ctx, ctrl.text.trim());
-                },
-                child: Text(l10n.reject),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    if (outcome != null) messenger.showSnackBar(SnackBar(content: Text(outcome)));
+    await _load();
   }
 
   @override
@@ -160,14 +120,18 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
                           ? _Empty(l10n.noApplications)
                           : Column(children: [
                               for (final c in kyc)
-                                _Item(
-                                  title: c['name'] as String,
-                                  subtitle: l10n.byAgentAt(
-                                      '${c['createdByAgent']}', formatNepalTime(c['createdAt'] as String?)),
-                                  onApprove:
-                                      _busy ? null : () => _kyc(c['customerId'] as String, c['name'] as String, true),
-                                  onReject:
-                                      _busy ? null : () => _kyc(c['customerId'] as String, c['name'] as String, false),
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(c['name'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                  subtitle: Text(
+                                      l10n.byAgentAt(
+                                          '${c['createdByAgent']}', formatNepalTime(c['createdAt'] as String?)),
+                                      style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
+                                  trailing: FilledButton(
+                                    style: _rowButton,
+                                    onPressed: _busy ? null : () => _review(c['customerId'] as String),
+                                    child: Text(l10n.reviewApplication),
+                                  ),
                                 ),
                             ]),
                     ),

@@ -91,14 +91,47 @@ service cloud.firestore {
         && incoming().createdByAgent == me()
         && incoming().kycStatus == 'pending_review'
         && incoming().mobile is string && incoming().mobile.matches('9[78][0-9]{8}')
-        && incoming().citizenshipNo is string;
+        && incoming().citizenshipNo is string
+        && atLeast16(incoming().dobAd)
+        && captured(incoming().documents, 'citizenshipFront')
+        && captured(incoming().documents, 'citizenshipBack')
+        && captured(incoming().documents, 'photo')
+        && !('kycViewedBy' in incoming());
 
-      // Only a supervisor decides KYC, once.
+      // A supervisor opening an application for review adds themself to kycViewedBy.
       allow update: if isSupervisor()
         && resource.data.kycStatus == 'pending_review'
+        && changed().hasOnly(['kycViewedBy', 'kycViewedAt'])
+        && incoming().kycViewedBy.toSet()
+             == resource.data.get('kycViewedBy', []).toSet().union([me()].toSet());
+
+      // Only a supervisor decides KYC, once, and only after opening the application.
+      allow update: if isSupervisor()
+        && resource.data.kycStatus == 'pending_review'
+        && me() in resource.data.get('kycViewedBy', [])
         && changed().hasOnly(['kycStatus', 'kycReviewedBy', 'kycReviewedAt', 'kycRejectReason'])
         && incoming().kycStatus in ['verified', 'rejected']
         && incoming().kycReviewedBy == me();
+
+      // Date of birth 'YYYY-MM-DD' is at least 16 years before today's date in Nepal (UTC+5:45).
+      function atLeast16(dob) {
+        let now = request.time + duration.value(345, 'm');
+        let p = dob.split('-');
+        let y = int(p[0]);
+        let m = int(p[1]);
+        let d = int(p[2]);
+        return dob is string && dob.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+          && (y < now.year() - 16
+            || (y == now.year() - 16
+              && (m < now.month() || (m == now.month() && d <= now.day()))));
+      }
+
+      // A document is captured: the onboarding tick (`true`, older app versions)
+      // or a record with captured == true (it may also carry the uploaded file's storagePath and url).
+      function captured(docs, kind) {
+        return docs is map && kind in docs
+          && (docs[kind] == true || (docs[kind] is map && docs[kind].get('captured', false) == true));
+      }
     }
 
     match /accounts/{accountNo} {
