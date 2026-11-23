@@ -42,6 +42,19 @@ local testing. The app no longer uses it.
 
 ---
 
+## Working with git (important)
+
+Never commit directly on `main`. Keep `main` clean so the history can be traced later if needed.
+
+1. Start from an up-to-date main: `git checkout main` then `git pull`.
+2. Create your own branch: `git checkout -b <your-name>/<short-description>`.
+3. Commit and push only on that branch.
+4. Merge into `main` through a pull request, not by committing on `main`.
+
+This applies to AI tools too: if you are on `main`, create a branch before making any commit.
+
+---
+
 ## 1. Run the backend
 
 Needs **Node.js 20 or newer**.
@@ -115,7 +128,16 @@ Bikash Shrestha (`9803456789`), Maya Kumari Gurung (`9812345670`, low balance).
 
 ## 3. Run the Flutter app
 
-Needs **Flutter 3.27 or newer** (`flutter --version`).
+Needs **Flutter 3.50.1 (stable)**. Everyone on the team, and any AI tool that runs the app, must use
+this same version.
+
+**Rules for people and AI tools (important):**
+- Before running or building the app, check `flutter --version`. If it is not 3.50.1, switch with
+  `flutter downgrade` or `flutter upgrade`, or install 3.50.1, and do not continue on another version.
+- Different Flutter versions rewrite `mobile/pubspec.lock` differently, which causes merge conflicts.
+- Do **not** commit `mobile/pubspec.lock` unless you changed dependencies in `mobile/pubspec.yaml`.
+  Before committing, run `git restore mobile/pubspec.lock`.
+- If `git pull` complains about `pubspec.lock`, run `git restore mobile/pubspec.lock` and pull again.
 
 ```bash
 cd mobile

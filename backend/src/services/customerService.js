@@ -60,7 +60,24 @@ async function search(q) {
 async function getForAgent(customerId) {
   const c = await getStore().get('customers', customerId);
   if (!c) throw new AppError(404, 'CUSTOMER_NOT_FOUND', 'Customer not found');
-  return { ...summary(c, await accountsFor(c.id)), gender: c.gender, occupation: c.occupation, occupationCode: c.occupationCode || null, address: c.address };
+  return {
+    ...summary(c, await accountsFor(c.id)),
+    firstName: c.firstName,
+    middleName: c.middleName || '',
+    lastName: c.lastName,
+    gender: c.gender,
+    maritalStatus: c.maritalStatus || null,
+    dobBs: c.dobBs || null,
+    dobAd: c.dobAd || null,
+    occupation: c.occupation,
+    occupationCode: c.occupationCode || null,
+    citizenshipIssueDateBs: c.citizenshipIssueDateBs || null,
+    citizenshipIssueDistrict: c.citizenshipIssueDistrict || null,
+    pan: c.pan || null,
+    family: c.family || {},
+    address: c.address,
+    createdAt: c.createdAt || null,
+  };
 }
 
 // Onboarding (UC3). Creates the customer and a pending savings account in one transaction.

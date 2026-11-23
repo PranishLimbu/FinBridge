@@ -1280,4 +1280,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errNotPending => 'This application has already been reviewed';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get allCaughtUp => 'You’re all caught up.';
+
+  @override
+  String get sendGetCash => 'Send / get cash';
+
+  @override
+  String get cashInHandLabel => 'Cash in hand';
+
+  @override
+  String limitUsedOf(String percent, String limit) {
+    return '$percent% of $limit limit';
+  }
 }

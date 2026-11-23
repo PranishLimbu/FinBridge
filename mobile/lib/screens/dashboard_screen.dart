@@ -61,7 +61,22 @@ class DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const FbLogo(compact: true),
-        actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh), tooltip: context.l10n.refresh)],
+        actions: [
+          _bell(),
+          const SizedBox(width: 8),
+          // Agent initial; opens the Terminal tab (profile and settings).
+          InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () => widget.onOpenTab(3),
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: FbColors.primary,
+              child: Text(agent.name.isNotEmpty ? agent.name[0].toUpperCase() : '?',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+            ),
+          ),
+          const SizedBox(width: 16),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: refresh,
@@ -83,11 +98,95 @@ class DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  /// Information notices live in the bell; the dashboard keeps only what needs action.
+  static const _bellTypes = {'kyc_pending', 'pending_otp'};
+
+  List<Map<String, dynamic>> _notices() => ((_data?['alerts'] as List?) ?? const [])
+      .cast<Map<String, dynamic>>()
+      .where((a) => _bellTypes.contains(a['type']))
+      .toList();
+
+  List<Map<String, dynamic>> _actionAlerts(Map<String, dynamic> d) => (d['alerts'] as List)
+      .cast<Map<String, dynamic>>()
+      .where((a) => !_bellTypes.contains(a['type']))
+      // The end-of-day count is only due in the evening.
+      .where((a) => a['type'] != 'eod_due' || DateTime.now().hour >= 17)
+      .toList();
+
+  Widget _bell() {
+    final n = _notices();
+    return Tooltip(
+      message: context.l10n.notificationsTitle,
+      child: Material(
+        color: FbColors.primaryLight,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: _showNotices,
+          child: SizedBox(
+            width: 40,
+            height: 40,
+            child: Center(
+              child: Badge(
+                isLabelVisible: n.isNotEmpty,
+                label: Text('${n.length}'),
+                child: const Icon(Icons.notifications_none, size: 22, color: FbColors.primary),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showNotices() {
+    final n = _notices();
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(context.l10n.notificationsTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: FbColors.primary)),
+              const SizedBox(height: 8),
+              if (n.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: Text(context.l10n.allCaughtUp, style: const TextStyle(color: FbColors.textMuted))),
+                ),
+              for (final a in n)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: FbColors.primaryLight,
+                    child: Icon(a['type'] == 'pending_otp' ? Icons.sms_outlined : Icons.assignment_outlined,
+                        color: FbColors.primary),
+                  ),
+                  title: Text(_alertMessage(a)),
+                  trailing: a['type'] == 'pending_otp' ? const Icon(Icons.chevron_right) : null,
+                  onTap: a['type'] == 'pending_otp'
+                      ? () {
+                          Navigator.pop(ctx);
+                          widget.onOpenTab(2);
+                        }
+                      : null,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   List<Widget> _content(Map<String, dynamic> d) {
     final l10n = context.l10n;
     final f = Float.fromJson(d['float'] as Map<String, dynamic>);
     final today = d['today'] as Map<String, dynamic>;
-    final alerts = (d['alerts'] as List).cast<Map<String, dynamic>>();
+    final alerts = _actionAlerts(d);
     final recent = (d['recent'] as List).map((t) => Txn.fromJson(t as Map<String, dynamic>)).toList();
 
     return [
@@ -180,107 +279,78 @@ class DashboardScreenState extends State<DashboardScreen> {
         ],
       );
 
-  /// Navy card with the cash in hand, how full the drawer is, and a rebalance button.
+  /// Compact navy card: cash in hand, a thin drawer-usage bar, and a small button to move cash.
   Widget _cashCard(Float f) => Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(color: FbColors.primary, borderRadius: BorderRadius.circular(20)),
+        padding: const EdgeInsets.fromLTRB(16, 12, 12, 14),
+        decoration: BoxDecoration(color: FbColors.primary, borderRadius: BorderRadius.circular(16)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.payments_outlined, color: FbColors.accent, size: 20),
-              ),
-              const SizedBox(width: 10),
               Expanded(
-                child: Text(context.l10n.cashInHand,
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+                child: Text(context.l10n.cashInHandLabel,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
               ),
-              Text(context.l10n.openingAmount(formatNpr(f.opening)),
-                  style: const TextStyle(color: Colors.white60, fontSize: 12)),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: FbColors.accent,
+                  minimumSize: const Size(0, 30),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                onPressed: () => TerminalScreen.rebalance(context),
+                icon: const Icon(Icons.swap_vert, size: 16),
+                label: Text(context.l10n.sendGetCash),
+              ),
             ]),
-            const SizedBox(height: 14),
             FittedBox(
               alignment: Alignment.centerLeft,
               fit: BoxFit.scaleDown,
               child: Text(formatNpr(f.cash),
-                  style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w800)),
+                  style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
             ),
-            Text(amountInWords(f.cash),
-                style: const TextStyle(color: Colors.white70, fontSize: 13, fontStyle: FontStyle.italic)),
-            const SizedBox(height: 14),
-            Row(children: [
-              Expanded(
-                child: Text(context.l10n.usedPercent('${f.utilisation}'),
-                    style: const TextStyle(color: Colors.white70, fontSize: 12)),
-              ),
-              Text(context.l10n.limitAmount(formatNpr(f.limit)),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            ]),
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
             ClipRRect(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(3),
               child: LinearProgressIndicator(
                 value: (f.utilisation / 100).clamp(0, 1).toDouble(),
-                minHeight: 8,
+                minHeight: 5,
                 backgroundColor: Colors.white24,
                 color: FbColors.accent,
               ),
             ),
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(
-                child: Text(context.l10n.minReserveAmount(formatNpr(f.minReserve)),
-                    style: const TextStyle(color: Colors.white60, fontSize: 12)),
-              ),
-              FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: FbColors.accent,
-                  foregroundColor: FbColors.primary,
-                  minimumSize: const Size(0, 38),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () => TerminalScreen.rebalance(context),
-                icon: const Icon(Icons.swap_vert, size: 18),
-                label: Text(context.l10n.rebalance),
-              ),
-            ]),
+            const SizedBox(height: 6),
+            Text(context.l10n.limitUsedOf('${f.utilisation}', formatNpr(f.limit)),
+                style: const TextStyle(color: Colors.white60, fontSize: 11)),
           ],
         ),
       );
 
   Widget _ledgerTile(IconData icon, String label, num amount, int count, Color fg, Color bg) => Card(
         child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
             children: [
-              Row(children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
-                  child: Icon(icon, color: fg, size: 18),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+                child: Icon(icon, color: fg, size: 16),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
+                    FittedBox(
+                      alignment: Alignment.centerLeft,
+                      fit: BoxFit.scaleDown,
+                      child: Text(formatNpr(amount),
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: fg)),
+                    ),
+                  ],
                 ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-                  child: Text(context.l10n.txnCount(count),
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg)),
-                ),
-              ]),
-              const SizedBox(height: 10),
-              Text(label, style: const TextStyle(fontSize: 13, color: FbColors.textMuted)),
-              const SizedBox(height: 2),
-              FittedBox(
-                alignment: Alignment.centerLeft,
-                fit: BoxFit.scaleDown,
-                child: Text(formatNpr(amount), style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: fg)),
               ),
             ],
           ),
@@ -314,13 +384,10 @@ class DashboardScreenState extends State<DashboardScreen> {
         ),
       );
 
-  /// A notice card, with a button for the thing the agent should do about it.
-  Widget _alert(Map<String, dynamic> a) {
+  String _alertMessage(Map<String, dynamic> a) {
     final l10n = context.l10n;
-    final type = a['type'] as String;
     final count = (a['count'] as num?)?.toInt() ?? 0;
-    final warn = type == 'low_float' || type == 'high_float' || type == 'pending_otp';
-    final message = switch (type) {
+    return switch (a['type'] as String) {
       'kyc_pending' => l10n.alertKycPending(count),
       'eod_due' => l10n.alertEodDue,
       'pending_otp' => l10n.alertPendingOtp(count),
@@ -328,9 +395,17 @@ class DashboardScreenState extends State<DashboardScreen> {
       'high_float' => l10n.alertHighFloat,
       _ => a['message'] as String? ?? '',
     };
+  }
+
+  /// A notice card, with a button for the thing the agent should do about it.
+  Widget _alert(Map<String, dynamic> a) {
+    final l10n = context.l10n;
+    final type = a['type'] as String;
+    final warn = type == 'low_float' || type == 'high_float' || type == 'pending_otp';
+    final message = _alertMessage(a);
     final (icon, action, onAction) = switch (type) {
       'eod_due' => (Icons.schedule, l10n.startEod, () => _open(const EodScreen())),
-      'low_float' || 'high_float' => (Icons.account_balance_wallet_outlined, l10n.rebalance,
+      'low_float' || 'high_float' => (Icons.account_balance_wallet_outlined, l10n.sendGetCash,
           () => TerminalScreen.rebalance(context)),
       'pending_otp' => (Icons.sms_outlined, l10n.view, () => widget.onOpenTab(2)),
       _ => (Icons.assignment_outlined, null, null),

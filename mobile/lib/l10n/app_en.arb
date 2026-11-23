@@ -438,5 +438,11 @@
   "errEodAlreadySubmitted": "Today’s end-of-day report has already been submitted",
   "errInvalidPin": "Current PIN is incorrect",
   "errSamePin": "New PIN must be different",
-  "errNotPending": "This application has already been reviewed"
+  "errNotPending": "This application has already been reviewed",
+  "notificationsTitle": "Notifications",
+  "allCaughtUp": "You’re all caught up.",
+  "sendGetCash": "Send / get cash",
+  "cashInHandLabel": "Cash in hand",
+  "limitUsedOf": "{percent}% of {limit} limit",
+  "@limitUsedOf": {"placeholders": {"percent": {"type": "String"}, "limit": {"type": "String"}}}
 }
