@@ -462,5 +462,14 @@
   "tole": "Tole",
   "fullAddress": "Full address",
   "accounts": "Accounts",
-  "noAccounts": "No accounts"
+  "noAccounts": "No accounts",
+  "reviewApplication": "Review",
+  "reviewApplicationTitle": "Review application",
+  "decision": "Decision",
+  "reviewCheckFirst": "Check the customer’s details and documents above, then approve or reject.",
+  "reviewChecked": "I have checked the customer’s details and documents",
+  "docNoFile": "Checked by the agent at onboarding. No scan uploaded yet.",
+  "docMissing": "Not provided",
+  "docLoadError": "Couldn’t load this file",
+  "errKycNotOpened": "Open the application and check the details and documents first"
 }

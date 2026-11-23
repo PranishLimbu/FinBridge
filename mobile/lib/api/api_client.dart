@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../utils/age.dart';
 import 'money.dart';
 
 /// An error from a FinBridge request: a broken business rule, a refused permission, or a
@@ -126,6 +127,9 @@ class ApiClient {
         return {'results': term.length < 2 ? [] : await _searchCustomers(term)};
       case ['customers', final id]:
         return _customer(id);
+      case ['supervisor', 'customers', final id]:
+        _requireRole('supervisor');
+        return _openForReview(id);
       case ['transactions']:
         _requireRole('agent');
         return {'results': await _listTransactions(q)};
@@ -534,8 +538,52 @@ class ApiClient {
       'pan': c['pan'],
       'family': c['family'] ?? {},
       'address': c['address'],
+      'documents': {for (final k in documentKinds) k: _documentRecord((c['documents'] as Map?)?[k])},
+      'createdByAgent': c['createdByAgent'],
       'createdAt': c['createdAt']?.toString(),
+      'kycViewedBy': List<String>.from(c['kycViewedBy'] as List? ?? const []),
+      'kycRejectReason': c['kycRejectReason'],
     };
+  }
+
+  /// The documents collected at onboarding, as keys of the customer's `documents` map.
+  static const documentKinds = ['citizenshipFront', 'citizenshipBack', 'photo'];
+
+  /// One document as stored on the customer:
+  /// `{captured, storagePath, url, contentType, uploadedAt}`.
+  /// `captured` is the agent's confirmation that the original was checked. The file fields
+  /// stay null until the scan or photo is uploaded (Firebase Storage path and download URL).
+  /// Older customers stored a plain `true`; that reads as captured with no file.
+  static Map<String, dynamic> _documentRecord(dynamic v) {
+    String? text(dynamic x) => x is String && x.trim().isNotEmpty ? x.trim() : null;
+    final m = v is Map ? v : const {};
+    final url = text(m['url']), storagePath = text(m['storagePath']);
+    return {
+      'captured': v == true || m['captured'] == true || url != null || storagePath != null,
+      'storagePath': storagePath,
+      'url': url,
+      'contentType': text(m['contentType']),
+      'uploadedAt': text(m['uploadedAt']),
+    };
+  }
+
+  /// A supervisor opens an application to review it. Opening it is recorded on the customer
+  /// (`kycViewedBy`), and approve or reject is refused, here and in firestore.rules, until the
+  /// deciding supervisor has opened it.
+  Future<Map<String, dynamic>> _openForReview(String customerId) async {
+    final c = (await _doc('customers', customerId).get()).data();
+    if (c == null) throw ApiException('CUSTOMER_NOT_FOUND', 'Customer not found', status: 404);
+    final viewers = List<String>.from(c['kycViewedBy'] as List? ?? const []);
+    if (c['kycStatus'] == 'pending_review' && !viewers.contains(_uid)) {
+      final batch = _db.batch()
+        ..update(_doc('customers', customerId), {
+          'kycViewedBy': FieldValue.arrayUnion([_uid]),
+          'kycViewedAt': _iso(),
+        })
+        ..set(_db.collection('auditLogs').doc(), _auditEntry('KYC_OPENED', {'customerId': customerId}));
+      await batch.commit();
+    }
+    return _customer(customerId);
   }
 
   static final _nameRe = RegExp(r"^[\p{L} .'-]+$", unicode: true);
@@ -571,8 +619,13 @@ class ApiClient {
       if (!_dateRe.hasMatch(str(k, b))) throw _invalid(k, 'Use YYYY-MM-DD');
     }
     final dob = DateTime.tryParse(str('dobAd', b));
-    final age = dob == null ? 0 : DateTime.now().difference(dob).inDays / 365.25;
-    if (age < 16 || age > 110) throw _invalid('dobAd', 'Customer must be at least 16 years old');
+    if (dob == null) throw _invalid('dobAd', 'Use YYYY-MM-DD');
+    // Exact age by calendar date in Nepal; firestore.rules repeats this check.
+    if (!oldEnoughToOnboard(dob)) {
+      throw ApiException('UNDER_AGE', 'The customer must be at least $minCustomerAge years old',
+          status: 400, details: {'field': 'dobAd'});
+    }
+    if (ageInYears(dob, nepalToday()) > 110) throw _invalid('dobAd', 'Check the date of birth');
     final occupation = str('occupation', b);
     if ('${b['occupationCode'] ?? ''}'.trim().isEmpty && (occupation.length < 2 || occupation.length > 60)) {
       throw _invalid('occupation', 'Choose an occupation');
@@ -589,13 +642,15 @@ class ApiClient {
     if (pan.isNotEmpty && !RegExp(r'^\d{9}$').hasMatch(pan)) throw _invalid('pan', 'PAN must be 9 digits');
     final ward = address['ward'];
     if (ward is! int || ward < 1 || ward > 35) throw _invalid('address.ward', 'Ward between 1 and 35');
-    if (documents['citizenshipFront'] != true) {
+    // Each document may arrive as the checklist tick (`true`) or as an uploaded file record.
+    final docRecords = {for (final k in documentKinds) k: _documentRecord(documents[k])};
+    if (docRecords['citizenshipFront']!['captured'] != true) {
       throw _invalid('documents.citizenshipFront', 'Capture the front of the citizenship certificate');
     }
-    if (documents['citizenshipBack'] != true) {
+    if (docRecords['citizenshipBack']!['captured'] != true) {
       throw _invalid('documents.citizenshipBack', 'Capture the back of the citizenship certificate');
     }
-    if (documents['photo'] != true) throw _invalid('documents.photo', 'Capture the customer’s photo');
+    if (docRecords['photo']!['captured'] != true) throw _invalid('documents.photo', 'Capture the customer’s photo');
     if (b['consent'] != true) throw _invalid('consent', 'The customer must agree to the terms');
 
     final tole = str('tole', address);
@@ -626,7 +681,7 @@ class ApiClient {
         'ward': ward,
         if (tole.isNotEmpty) 'tole': tole,
       },
-      'documents': {'citizenshipFront': true, 'citizenshipBack': true, 'photo': true},
+      'documents': docRecords,
     };
     data.removeWhere((_, v) => v == null);
     (data['family'] as Map).removeWhere((_, v) => v == null);
@@ -692,6 +747,10 @@ class ApiClient {
     if (c == null) throw ApiException('CUSTOMER_NOT_FOUND', 'Customer not found', status: 404);
     if (c['kycStatus'] != 'pending_review') {
       throw ApiException('NOT_PENDING', 'This application has already been reviewed', status: 409);
+    }
+    if (!List<String>.from(c['kycViewedBy'] as List? ?? const []).contains(_uid)) {
+      throw ApiException('KYC_NOT_OPENED', 'Open the application and check the details and documents first',
+          status: 409);
     }
     final accounts = await _accountsFor(customerId);
     final batch = _db.batch();

@@ -7,6 +7,7 @@ import '../api/models.dart';
 import '../l10n/l10n.dart';
 import '../state/session.dart';
 import '../theme.dart';
+import '../utils/age.dart';
 import '../utils/bs_date.dart';
 import '../widgets/bs_date_picker.dart';
 import '../widgets/common.dart';
@@ -148,7 +149,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   String? _dobValidator(String? _) {
     if (_dobAd == null) return l10n.chooseDob;
-    if ((_age ?? 0) < 16) return l10n.minAge16;
+    if (!oldEnoughToOnboard(_dobAd!)) return l10n.minAge16;
     return null;
   }
 
@@ -207,13 +208,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (d != null) setState(() => _issueBs.text = formatBs(d));
   }
 
-  int? get _age {
-    if (_dobAd == null) return null;
-    final now = DateTime.now();
-    var a = now.year - _dobAd!.year;
-    if (now.month < _dobAd!.month || (now.month == _dobAd!.month && now.day < _dobAd!.day)) a--;
-    return a;
-  }
+  int? get _age => _dobAd == null ? null : ageInYears(_dobAd!, nepalToday());
 
   void _next() {
     final listsOk = _listsValid();

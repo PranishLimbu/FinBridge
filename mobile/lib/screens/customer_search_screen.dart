@@ -96,7 +96,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                     color: FbColors.primary,
                     onPressed: () {
                       Navigator.pop(ctx);
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => CustomerDetailsScreen(customer: c)));
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => CustomerDetailsScreen(customerId: c.id)));
                     },
                   ),
                 ],

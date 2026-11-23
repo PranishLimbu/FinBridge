@@ -413,5 +413,14 @@
   "tole": "टोल",
   "fullAddress": "पूरा ठेगाना",
   "accounts": "खाताहरू",
-  "noAccounts": "कुनै खाता छैन"
+  "noAccounts": "कुनै खाता छैन",
+  "reviewApplication": "जाँच्नुहोस्",
+  "reviewApplicationTitle": "आवेदन जाँच",
+  "decision": "निर्णय",
+  "reviewCheckFirst": "माथिको ग्राहक विवरण र कागजात जाँचेर स्वीकृत वा अस्वीकृत गर्नुहोस्।",
+  "reviewChecked": "मैले ग्राहकको विवरण र कागजात जाँचें",
+  "docNoFile": "खाता खोल्दा एजेन्टले जाँच गरेको। स्क्यान अझै अपलोड भएको छैन।",
+  "docMissing": "उपलब्ध छैन",
+  "docLoadError": "यो फाइल खोल्न सकिएन",
+  "errKycNotOpened": "पहिले आवेदन खोलेर विवरण र कागजात जाँच्नुहोस्"
 }

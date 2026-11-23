@@ -1350,4 +1350,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noAccounts => 'No accounts';
+
+  @override
+  String get reviewApplication => 'Review';
+
+  @override
+  String get reviewApplicationTitle => 'Review application';
+
+  @override
+  String get decision => 'Decision';
+
+  @override
+  String get reviewCheckFirst =>
+      'Check the customer’s details and documents above, then approve or reject.';
+
+  @override
+  String get reviewChecked =>
+      'I have checked the customer’s details and documents';
+
+  @override
+  String get docNoFile =>
+      'Checked by the agent at onboarding. No scan uploaded yet.';
+
+  @override
+  String get docMissing => 'Not provided';
+
+  @override
+  String get docLoadError => 'Couldn’t load this file';
+
+  @override
+  String get errKycNotOpened =>
+      'Open the application and check the details and documents first';
 }

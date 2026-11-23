@@ -1340,4 +1340,33 @@ class AppLocalizationsNe extends AppLocalizations {
 
   @override
   String get noAccounts => 'कुनै खाता छैन';
+
+  @override
+  String get reviewApplication => 'जाँच्नुहोस्';
+
+  @override
+  String get reviewApplicationTitle => 'आवेदन जाँच';
+
+  @override
+  String get decision => 'निर्णय';
+
+  @override
+  String get reviewCheckFirst =>
+      'माथिको ग्राहक विवरण र कागजात जाँचेर स्वीकृत वा अस्वीकृत गर्नुहोस्।';
+
+  @override
+  String get reviewChecked => 'मैले ग्राहकको विवरण र कागजात जाँचें';
+
+  @override
+  String get docNoFile =>
+      'खाता खोल्दा एजेन्टले जाँच गरेको। स्क्यान अझै अपलोड भएको छैन।';
+
+  @override
+  String get docMissing => 'उपलब्ध छैन';
+
+  @override
+  String get docLoadError => 'यो फाइल खोल्न सकिएन';
+
+  @override
+  String get errKycNotOpened => 'पहिले आवेदन खोलेर विवरण र कागजात जाँच्नुहोस्';
 }

@@ -8,6 +8,15 @@ const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD');
 const name = z.string().trim().min(1, 'Required').max(50).regex(/^[\p{L} .'-]+$/u, 'Letters only');
 const optionalName = z.string().trim().max(50).optional().or(z.literal('')).transform((v) => v || undefined);
 
+const MIN_CUSTOMER_AGE = 16;
+/** Completed years on today's date in Nepal (UTC+5:45); the age goes up on the birthday itself. */
+function ageInNepal(dob, now = new Date()) {
+  const [y, m, d] = dob.split('-').map(Number);
+  const t = new Date(now.getTime() + (5 * 60 + 45) * 60 * 1000);
+  const ty = t.getUTCFullYear(), tm = t.getUTCMonth() + 1, td = t.getUTCDate();
+  return ty - y - (tm < m || (tm === m && td < d) ? 1 : 0);
+}
+
 const login = z.object({
   agentId: z.string().trim().min(3).max(20),
   pin,
@@ -33,10 +42,9 @@ const onboarding = z.object({
   gender: z.enum(['male', 'female', 'other']),
   maritalStatus: z.enum(['single', 'married', 'widowed', 'divorced']),
   dobBs: dateStr,
-  dobAd: dateStr.refine((d) => {
-    const age = (Date.now() - new Date(d).getTime()) / (365.25 * 24 * 3600 * 1000);
-    return age >= 16 && age <= 110;
-  }, 'Customer must be at least 16 years old'),
+  dobAd: dateStr
+    .refine((d) => ageInNepal(d) >= MIN_CUSTOMER_AGE, `The customer must be at least ${MIN_CUSTOMER_AGE} years old`)
+    .refine((d) => ageInNepal(d) <= 110, 'Check the date of birth'),
   occupation: z.string().trim().min(2).max(60),
   occupationCode: z.string().trim().max(10).optional(),
   mobile: z.string().regex(/^9[78]\d{8}$/, 'Enter a 10-digit Nepali mobile number starting 97 or 98'),

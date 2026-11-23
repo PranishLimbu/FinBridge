@@ -2473,6 +2473,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No accounts'**
   String get noAccounts;
+
+  /// No description provided for @reviewApplication.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get reviewApplication;
+
+  /// No description provided for @reviewApplicationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review application'**
+  String get reviewApplicationTitle;
+
+  /// No description provided for @decision.
+  ///
+  /// In en, this message translates to:
+  /// **'Decision'**
+  String get decision;
+
+  /// No description provided for @reviewCheckFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the customer’s details and documents above, then approve or reject.'**
+  String get reviewCheckFirst;
+
+  /// No description provided for @reviewChecked.
+  ///
+  /// In en, this message translates to:
+  /// **'I have checked the customer’s details and documents'**
+  String get reviewChecked;
+
+  /// No description provided for @docNoFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Checked by the agent at onboarding. No scan uploaded yet.'**
+  String get docNoFile;
+
+  /// No description provided for @docMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Not provided'**
+  String get docMissing;
+
+  /// No description provided for @docLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t load this file'**
+  String get docLoadError;
+
+  /// No description provided for @errKycNotOpened.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the application and check the details and documents first'**
+  String get errKycNotOpened;
 }
 
 class _AppLocalizationsDelegate
