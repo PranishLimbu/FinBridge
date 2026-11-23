@@ -43,6 +43,7 @@ service cloud.firestore {
     match /districts/{id} { allow read: if signedIn(); }
     match /localBodies/{id} { allow read: if signedIn(); }
     match /occupations/{code} { allow read: if signedIn(); }
+    match /terminals/{terminalId} { allow read: if signedIn(); }
 
     // ---------------------------------------------------------------- agents
     match /agents/{agentId} {

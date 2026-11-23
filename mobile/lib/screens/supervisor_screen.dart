@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
+import '../l10n/l10n.dart';
 import '../state/session.dart';
 import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
+import '../widgets/language_switch.dart';
 
-/// Home screen for the bank supervisor: approve onboarding (KYC), decide float
-/// rebalance requests and unlock agents locked out by wrong PINs.
+/// Home screen for the bank supervisor: approve onboarding (KYC), decide cash rebalance
+/// requests and unlock agents locked out by wrong PINs.
 class SupervisorScreen extends StatefulWidget {
   const SupervisorScreen({super.key});
 
@@ -32,27 +34,34 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
   Future<void> _load() async {
     try {
       final d = await _api.get('/supervisor/overview') as Map<String, dynamic>;
-      if (mounted) setState(() { _data = d; _error = null; });
+      if (mounted) {
+        setState(() {
+          _data = d;
+          _error = null;
+        });
+      }
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = context.l10n.error(e));
     }
   }
 
   /// Runs a supervisor action, shows its outcome and reloads the overview.
   Future<void> _act(Future<void> Function() action, String done) async {
+    final l10n = context.l10n;
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
       await action();
       messenger.showSnackBar(SnackBar(content: Text(done)));
     } on ApiException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message), backgroundColor: FbColors.danger));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.error(e)), backgroundColor: FbColors.danger));
     }
     await _load();
     if (mounted) setState(() => _busy = false);
   }
 
   void _kyc(String id, String name, bool approve) async {
+    final l10n = context.l10n;
     String? reason;
     if (!approve) {
       reason = await _askReason(name);
@@ -63,11 +72,12 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
         'decision': approve ? 'approve' : 'reject',
         if (reason != null) 'reason': reason,
       }),
-      approve ? '$name approved: account is now active' : '$name rejected',
+      approve ? l10n.approvedActive(name) : l10n.rejectedName(name),
     );
   }
 
   Future<String?> _askReason(String name) {
+    final l10n = context.l10n;
     final ctrl = TextEditingController();
     return showDialog<String>(
       context: context,
@@ -75,25 +85,25 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
         String? error;
         return StatefulBuilder(
           builder: (ctx, setState) => AlertDialog(
-            title: Text('Reject $name'),
+            title: Text(l10n.rejectName(name)),
             content: TextField(
               controller: ctrl,
               autofocus: true,
               maxLength: 300,
-              decoration: InputDecoration(labelText: 'Reason', errorText: error),
+              decoration: InputDecoration(labelText: l10n.reason, errorText: error),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
               FilledButton(
                 style: FilledButton.styleFrom(backgroundColor: FbColors.danger),
                 onPressed: () {
                   if (ctrl.text.trim().length < 5) {
-                    setState(() => error = 'At least 5 characters');
+                    setState(() => error = l10n.atLeastFiveChars);
                     return;
                   }
                   Navigator.pop(ctx, ctrl.text.trim());
                 },
-                child: const Text('Reject'),
+                child: Text(l10n.reject),
               ),
             ],
           ),
@@ -104,6 +114,7 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final session = context.watch<Session>();
     final me = session.agent!;
     final d = _data;
@@ -114,15 +125,14 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Supervisor'),
+        title: Text(l10n.supervisorTitle),
         actions: [
-          IconButton(tooltip: 'Refresh', onPressed: _busy ? null : _load, icon: const Icon(Icons.refresh)),
-          IconButton(tooltip: 'Log out', onPressed: () => session.logout(), icon: const Icon(Icons.logout)),
+          IconButton(tooltip: l10n.refresh, onPressed: _busy ? null : _load, icon: const Icon(Icons.refresh)),
+          IconButton(tooltip: l10n.logOut, onPressed: () => session.logout(), icon: const Icon(Icons.logout)),
         ],
       ),
       body: Column(
         children: [
-          const SimulatedBanner(),
           if (_busy) const LinearProgressIndicator(minHeight: 2),
           Expanded(
             child: RefreshIndicator(
@@ -130,52 +140,66 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  Text('${me.name} • ${me.id}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                  Text(me.location, style: const TextStyle(color: FbColors.textMuted)),
+                  Row(children: [
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('${me.name} • ${me.id}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                        Text(me.location, style: const TextStyle(color: FbColors.textMuted)),
+                      ]),
+                    ),
+                    const LanguageSwitch(),
+                  ]),
                   const SizedBox(height: 16),
                   if (_error != null) ...[MessageBox(_error!), const SizedBox(height: 12)],
                   if (d == null && _error == null)
                     const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
                   if (d != null) ...[
                     SectionCard(
-                      title: 'Customer applications (${kyc.length})',
+                      title: l10n.customerApplications(kyc.length),
                       child: kyc.isEmpty
-                          ? const _Empty('No applications waiting for review')
+                          ? _Empty(l10n.noApplications)
                           : Column(children: [
                               for (final c in kyc)
                                 _Item(
                                   title: c['name'] as String,
-                                  subtitle: 'By ${c['createdByAgent']} • ${formatNepalTime(c['createdAt'] as String?)}',
-                                  onApprove: _busy ? null : () => _kyc(c['customerId'] as String, c['name'] as String, true),
-                                  onReject: _busy ? null : () => _kyc(c['customerId'] as String, c['name'] as String, false),
+                                  subtitle: l10n.byAgentAt(
+                                      '${c['createdByAgent']}', formatNepalTime(c['createdAt'] as String?)),
+                                  onApprove:
+                                      _busy ? null : () => _kyc(c['customerId'] as String, c['name'] as String, true),
+                                  onReject:
+                                      _busy ? null : () => _kyc(c['customerId'] as String, c['name'] as String, false),
                                 ),
                             ]),
                     ),
                     const SizedBox(height: 12),
                     SectionCard(
-                      title: 'Float rebalance requests (${floats.length})',
+                      title: l10n.rebalanceRequests(floats.length),
                       child: floats.isEmpty
-                          ? const _Empty('No pending requests')
+                          ? _Empty(l10n.noPendingRequests)
                           : Column(children: [
                               for (final r in floats)
                                 _Item(
                                   title: '${formatNpr(r['amount'] as num)} • '
-                                      '${r['direction'] == 'cash_to_bank' ? 'cash to bank' : 'cash from bank'}',
+                                      '${r['direction'] == 'cash_to_bank' ? l10n.cashToBank : l10n.cashFromBank}',
                                   subtitle: '${r['agentId']} • ${formatNepalTime(r['createdAt'] as String?)}',
-                                  onApprove: _busy ? null : () => _act(
-                                      () => _api.post('/supervisor/float-requests/${r['id']}', {'approve': true}),
-                                      'Float request approved'),
-                                  onReject: _busy ? null : () => _act(
-                                      () => _api.post('/supervisor/float-requests/${r['id']}', {'approve': false}),
-                                      'Float request rejected'),
+                                  onApprove: _busy
+                                      ? null
+                                      : () => _act(
+                                          () => _api.post('/supervisor/float-requests/${r['id']}', {'approve': true}),
+                                          l10n.requestApproved),
+                                  onReject: _busy
+                                      ? null
+                                      : () => _act(
+                                          () => _api.post('/supervisor/float-requests/${r['id']}', {'approve': false}),
+                                          l10n.requestRejected),
                                 ),
                             ]),
                     ),
                     const SizedBox(height: 12),
                     SectionCard(
-                      title: 'Locked agents (${locked.length})',
+                      title: l10n.lockedAgents(locked.length),
                       child: locked.isEmpty
-                          ? const _Empty('No agents are locked out')
+                          ? _Empty(l10n.noLockedAgents)
                           : Column(children: [
                               for (final a in locked)
                                 ListTile(
@@ -184,10 +208,11 @@ class _SupervisorScreenState extends State<SupervisorScreen> {
                                   subtitle: Text(a['location'] as String? ?? ''),
                                   trailing: FilledButton(
                                     style: _rowButton,
-                                    onPressed: _busy ? null : () => _act(
-                                        () => _api.post('/supervisor/agents/${a['agentId']}/unlock'),
-                                        '${a['name']} unlocked'),
-                                    child: const Text('Unlock'),
+                                    onPressed: _busy
+                                        ? null
+                                        : () => _act(() => _api.post('/supervisor/agents/${a['agentId']}/unlock'),
+                                            l10n.unlockedName('${a['name']}')),
+                                    child: Text(l10n.unlock),
                                   ),
                                 ),
                             ]),
@@ -214,6 +239,7 @@ class _Item extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(children: [
@@ -226,10 +252,10 @@ class _Item extends StatelessWidget {
         TextButton(
           style: TextButton.styleFrom(foregroundColor: FbColors.danger, minimumSize: const Size(0, 40)),
           onPressed: onReject,
-          child: const Text('Reject'),
+          child: Text(l10n.reject),
         ),
         const SizedBox(width: 4),
-        FilledButton(style: _rowButton, onPressed: onApprove, child: const Text('Approve')),
+        FilledButton(style: _rowButton, onPressed: onApprove, child: Text(l10n.approve)),
       ]),
     );
   }
@@ -241,6 +267,5 @@ class _Empty extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) =>
-      Text(text, style: const TextStyle(color: FbColors.textMuted));
+  Widget build(BuildContext context) => Text(text, style: const TextStyle(color: FbColors.textMuted));
 }

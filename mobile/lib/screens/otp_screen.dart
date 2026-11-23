@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../api/models.dart';
+import '../l10n/l10n.dart';
 import '../state/session.dart';
 import '../theme.dart';
 import '../utils/format.dart';
@@ -58,8 +59,9 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 
   Future<void> _confirm() async {
+    final l10n = context.l10n;
     if (!RegExp(r'^\d{6}$').hasMatch(_otp.text)) {
-      setState(() => _error = 'The OTP has 6 digits');
+      setState(() => _error = l10n.otpSixDigits);
       return;
     }
     setState(() {
@@ -75,9 +77,11 @@ class _OtpScreenState extends State<OtpScreen> {
     } on ApiException catch (e) {
       final left = e.details?['attemptsRemaining'];
       setState(() {
-        _error = left != null ? '${e.message}. $left attempt(s) left.' : e.message;
-        _closed = const {'OTP_EXPIRED', 'OTP_ATTEMPTS_EXCEEDED', 'NOT_AWAITING_OTP', 'INSUFFICIENT_FLOAT', 'INSUFFICIENT_BALANCE', 'ACCOUNT_INACTIVE'}
-            .contains(e.code);
+        _error = left is int ? l10n.attemptsLeft(l10n.error(e), left) : l10n.error(e);
+        _closed = const {
+          'OTP_EXPIRED', 'OTP_ATTEMPTS_EXCEEDED', 'NOT_AWAITING_OTP', 'INSUFFICIENT_FLOAT', 'INSUFFICIENT_BALANCE',
+          'ACCOUNT_INACTIVE',
+        }.contains(e.code);
       });
       _otp.clear();
     } finally {
@@ -86,6 +90,7 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 
   Future<void> _resend() async {
+    final l10n = context.l10n;
     try {
       final res = await context.read<Session>().api.post('/transactions/${t.id}/resend-otp') as Map<String, dynamic>?;
       setState(() {
@@ -95,7 +100,7 @@ class _OtpScreenState extends State<OtpScreen> {
         _error = null;
       });
     } on ApiException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _error = l10n.error(e));
     }
   }
 
@@ -108,6 +113,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final mm = _left.inMinutes.toString().padLeft(2, '0');
     final ss = (_left.inSeconds % 60).toString().padLeft(2, '0');
     final resendIn = _canResendAt.difference(DateTime.now()).inSeconds;
@@ -115,10 +121,10 @@ class _OtpScreenState extends State<OtpScreen> {
       canPop: _closed,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Customer OTP'),
+          title: Text(l10n.otpTitle),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            tooltip: _closed ? 'Back' : 'Cancel & Back',
+            tooltip: _closed ? l10n.back : l10n.cancelAndBack,
             onPressed: () {
               if (_closed) {
                 Navigator.of(context).pop();
@@ -128,81 +134,73 @@ class _OtpScreenState extends State<OtpScreen> {
             },
           ),
         ),
-        body: Column(
+        body: ListView(
+          padding: const EdgeInsets.all(16),
           children: [
-            const SimulatedBanner(),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  SectionCard(
-                    child: Column(children: [
-                      InfoRow('Customer', t.customerName),
-                      InfoRow('Account', t.accountMasked),
-                      InfoRow('Cash to hand over', formatNpr(t.amount), bold: true),
-                      InfoRow('Fee', formatNpr(t.fee)),
-                      InfoRow('Total debited', formatNpr(t.total)),
-                    ]),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Ask the customer for the 6-digit OTP sent to their mobile.',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text(_left == Duration.zero ? 'OTP expired' : 'Expires in $mm:$ss',
-                      style: TextStyle(color: _left.inSeconds < 60 ? FbColors.danger : FbColors.textMuted)),
-                  if (_devOtp != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: FbColors.warningBg, borderRadius: BorderRadius.circular(8)),
-                      child: Text('Demo OTP: $_devOtp',
-                          style: const TextStyle(color: FbColors.warning, fontWeight: FontWeight.w600)),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _otp,
-                    enabled: !_closed,
-                    keyboardType: TextInputType.number,
-                    maxLength: 6,
-                    obscureText: true,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 28, letterSpacing: 12),
-                    decoration: const InputDecoration(counterText: '', hintText: '••••••'),
-                    onSubmitted: (_) => _confirm(),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_error != null) ...[MessageBox(_error!), const SizedBox(height: 12)],
-                  if (!_closed) ...[
-                    FilledButton(
-                      onPressed: _busy || _left == Duration.zero ? null : _confirm,
-                      child: Text(_busy ? 'Checking…' : 'Verify OTP and confirm'),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: resendIn > 0 ? null : _resend,
-                          child: Text(resendIn > 0 ? 'Resend in ${resendIn}s' : 'Resend OTP'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _busy ? null : _cancel,
-                          style: OutlinedButton.styleFrom(foregroundColor: FbColors.danger),
-                          child: const Text('Cancel'),
-                        ),
-                      ),
-                    ]),
-                  ] else
-                    FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Back to counter')),
-                  const SizedBox(height: 16),
-                  const Text('Give cash only after you see “Confirmed”.',
-                      style: TextStyle(color: FbColors.danger, fontWeight: FontWeight.w600)),
-                ],
-              ),
+            SectionCard(
+              child: Column(children: [
+                InfoRow(l10n.customer, t.customerName),
+                InfoRow(l10n.account, t.accountMasked),
+                InfoRow(l10n.cashToHandOver, formatNpr(t.amount), bold: true),
+                InfoRow(l10n.fee, formatNpr(t.fee)),
+                InfoRow(l10n.totalDebited, formatNpr(t.total)),
+              ]),
             ),
+            const SizedBox(height: 16),
+            Text(l10n.otpAsk, style: const TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text(_left == Duration.zero ? l10n.otpExpired : l10n.otpExpiresIn('$mm:$ss'),
+                style: TextStyle(color: _left.inSeconds < 60 ? FbColors.danger : FbColors.textMuted)),
+            if (_devOtp != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: FbColors.warningBg, borderRadius: BorderRadius.circular(8)),
+                child: Text(l10n.demoOtp(_devOtp!),
+                    style: const TextStyle(color: FbColors.warning, fontWeight: FontWeight.w600)),
+              ),
+            ],
+            const SizedBox(height: 12),
+            TextField(
+              controller: _otp,
+              enabled: !_closed,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              obscureText: true,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 28, letterSpacing: 12),
+              decoration: const InputDecoration(counterText: '', hintText: '••••••'),
+              onSubmitted: (_) => _confirm(),
+            ),
+            const SizedBox(height: 12),
+            if (_error != null) ...[MessageBox(_error!), const SizedBox(height: 12)],
+            if (!_closed) ...[
+              FilledButton(
+                onPressed: _busy || _left == Duration.zero ? null : _confirm,
+                child: Text(_busy ? l10n.checking : l10n.verifyOtp),
+              ),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: resendIn > 0 ? null : _resend,
+                    child: Text(resendIn > 0 ? l10n.resendIn(resendIn) : l10n.resendOtp),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _busy ? null : _cancel,
+                    style: OutlinedButton.styleFrom(foregroundColor: FbColors.danger),
+                    child: Text(l10n.cancel),
+                  ),
+                ),
+              ]),
+            ] else
+              FilledButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.backToCounter)),
+            const SizedBox(height: 16),
+            Text(l10n.giveCashAfterConfirmed,
+                style: const TextStyle(color: FbColors.danger, fontWeight: FontWeight.w600)),
           ],
         ),
       ),

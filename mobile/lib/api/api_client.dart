@@ -342,9 +342,25 @@ class ApiClient {
       throw ApiException('ACCOUNT_INACTIVE', 'This agent account is not active.', status: 403);
     }
     _me = agent;
-    await _doc('agents', id).update({'lastLoginAt': _iso(), 'lastTerminalId': b['terminalId']});
-    await _audit('LOGIN_SUCCESS', {'terminalId': b['terminalId']});
-    return {'token': id, 'agent': _publicAgent(id, agent)};
+    // The terminal is part of the agent's profile; its name comes from the `terminals` collection.
+    final terminalId = agent['terminalId'] as String?;
+    final terminalName = await _terminalName(terminalId);
+    await _doc('agents', id).update({'lastLoginAt': _iso(), 'lastTerminalId': terminalId});
+    await _audit('LOGIN_SUCCESS', {'terminalId': terminalId});
+    return {
+      'token': id,
+      'agent': {..._publicAgent(id, agent), 'terminalName': terminalName},
+    };
+  }
+
+  /// Name of a terminal, e.g. "Koteshwor Point, Ward 32"; null if it isn't in Firebase.
+  Future<String?> _terminalName(String? terminalId) async {
+    if (terminalId == null || terminalId.isEmpty) return null;
+    try {
+      return (await _doc('terminals', terminalId).get()).data()?['name'] as String?;
+    } on FirebaseException {
+      return null; // the terminal row is informational; never block a login on it
+    }
   }
 
   Future<void> _changePin(Map<String, dynamic> b) async {

@@ -7,6 +7,7 @@ class Agent {
         role = j['role'] as String,
         location = j['location'] as String? ?? '',
         terminalId = j['terminalId'] as String?,
+        terminalName = j['terminalName'] as String?,
         partnerBank = j['partnerBank'] as String? ?? '';
 
   final String id;
@@ -14,6 +15,9 @@ class Agent {
   final String role;
   final String location;
   final String? terminalId;
+
+  /// The terminal's name from the `terminals` collection, e.g. "Koteshwor Point, Ward 32".
+  final String? terminalName;
   final String partnerBank;
 }
 
@@ -110,18 +114,9 @@ class Txn {
   final Map<String, dynamic> raw;
 
   bool get isDeposit => type == 'deposit';
-  String get typeLabel => isDeposit ? 'Cash deposit' : 'Cash withdrawal';
-  String get statusLabel => switch (status) {
-        'confirmed' => 'Confirmed',
-        'awaiting_otp' => 'Pending OTP',
-        'cancelled' => 'Cancelled',
-        'failed' => 'Failed',
-        _ => status,
-      };
 
   // Receipt-only fields (present on GET /transactions/:id and after confirmation).
-  String get service => raw['service'] as String? ?? typeLabel;
-  String get totalLabel => raw['totalLabel'] as String? ?? 'Total';
+  // Labels such as "Total credited" come from AppLocalizations, not from here.
   String get partnerBank => raw['partnerBank'] as String? ?? '';
   double? get balanceBefore => (raw['balanceBefore'] as num?)?.toDouble();
   double? get balanceAfter => (raw['balanceAfter'] as num?)?.toDouble();

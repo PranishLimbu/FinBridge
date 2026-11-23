@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../api/models.dart';
+import '../l10n/l10n.dart';
 import '../state/session.dart';
 import '../theme.dart';
 import '../utils/format.dart';
@@ -40,20 +41,22 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       final res = await context.read<Session>().api.get('/transactions/${widget.transactionId}') as Map<String, dynamic>;
       if (mounted) setState(() => _t = Txn.fromJson(res));
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = context.l10n.error(e));
     }
   }
 
   Future<void> _sms() async {
+    final l10n = context.l10n;
     try {
       await context.read<Session>().api.post('/transactions/${widget.transactionId}/receipt/sms');
-      setState(() => _notice = 'Receipt sent to the customer by SMS.');
+      setState(() => _notice = l10n.receiptSmsSent);
     } on ApiException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _error = l10n.error(e));
     }
   }
 
   Future<void> _print() async {
+    final l10n = context.l10n;
     final t = _t;
     if (t == null) return;
     try {
@@ -64,38 +67,40 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
         onLayout: (_) => buildReceiptPdf(t),
       );
     } catch (e) {
-      if (mounted) setState(() => _error = 'Could not open the print dialog: $e');
+      if (mounted) setState(() => _error = l10n.printError('$e'));
     }
   }
 
   Future<void> _dispute() async {
+    final l10n = context.l10n;
     final reason = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Report a problem'),
+        title: Text(l10n.reportProblem),
         content: TextField(
           controller: reason,
           maxLines: 3,
-          decoration: const InputDecoration(hintText: 'What does the customer say went wrong?'),
+          decoration: InputDecoration(hintText: l10n.reportProblemHint),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send to supervisor')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.sendToSupervisor)),
         ],
       ),
     );
     if (ok != true || !mounted) return;
     try {
       await context.read<Session>().api.post('/transactions/${widget.transactionId}/disputes', {'reason': reason.text});
-      setState(() => _notice = 'Dispute sent to your bank supervisor.');
+      setState(() => _notice = l10n.disputeSent);
     } on ApiException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _error = l10n.error(e));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final t = _t;
     void goBack() {
       if (Navigator.of(context).canPop()) {
@@ -107,120 +112,116 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       }
     }
 
+    final when = t?.confirmedAt ?? t?.createdAt;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Receipt'),
+        title: Text(l10n.receiptTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          tooltip: 'Back',
+          tooltip: l10n.back,
           onPressed: goBack,
         ),
       ),
-      body: Column(
-        children: [
-          const SimulatedBanner(),
-          Expanded(
-            child: t == null
-                ? Center(child: _error != null ? MessageBox(_error!) : const CircularProgressIndicator())
-                : ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      if (t.status == 'confirmed')
-                        _confirmedBanner(t)
-                      else
-                        MessageBox('Transaction ${t.statusLabel.toLowerCase()}'
-                            '${t.failureReason != null ? ' (${t.failureReason})' : ''}'),
-                      const SizedBox(height: 12),
-                      ClipPath(
-                        clipper: _ZigZagClipper(),
-                        child: Container(
-                          color: FbColors.surface,
-                          padding: const EdgeInsets.fromLTRB(18, 26, 18, 26),
-                          child: Column(
-                            children: [
-                              const FbLogo(),
-                              const SizedBox(height: 8),
-                              if (t.partnerBank.isNotEmpty)
-                                Text('Partner bank: ${t.partnerBank}',
-                                    textAlign: TextAlign.center,
+      body: t == null
+          ? Center(child: _error != null ? MessageBox(_error!) : const CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                if (t.status == 'confirmed')
+                  _confirmedBanner(t)
+                else
+                  MessageBox(l10n.transactionStatus(l10n.status(t.status).toLowerCase())),
+                const SizedBox(height: 12),
+                ClipPath(
+                  clipper: _ZigZagClipper(),
+                  child: Container(
+                    color: FbColors.surface,
+                    padding: const EdgeInsets.fromLTRB(18, 26, 18, 26),
+                    child: Column(
+                      children: [
+                        const FbLogo(),
+                        const SizedBox(height: 8),
+                        if (t.partnerBank.isNotEmpty)
+                          Text(l10n.partnerBankLine(t.partnerBank),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  color: FbColors.accentDark, fontSize: 12, fontWeight: FontWeight.w600)),
+                        Text(
+                            l10n.receiptAgentLine('${t.agent['location'] ?? ''}', '${t.agent['name'] ?? ''}',
+                                '${t.agent['agentId'] ?? ''}'),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
+                        const SizedBox(height: 14),
+                        _stamp(t),
+                        const SizedBox(height: 14),
+                        const _DashedLine(),
+                        const SizedBox(height: 10),
+                        InfoRow(l10n.reference, t.reference),
+                        InfoRow(l10n.dateBs, formatBsDateTime(when, bsMonths: l10n.bsMonths)),
+                        InfoRow(l10n.dateAd, formatNepalTime(when)),
+                        InfoRow(l10n.service,
+                            t.isDeposit ? l10n.serviceDepositBranchless : l10n.serviceWithdrawalBranchless),
+                        InfoRow(l10n.customer, t.customerName),
+                        InfoRow(l10n.account, t.accountMasked),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration:
+                              BoxDecoration(color: FbColors.primaryLight, borderRadius: BorderRadius.circular(14)),
+                          child: Column(children: [
+                            InfoRow(t.isDeposit ? l10n.cashDeposited : l10n.cashPaidOut, formatNpr(t.amount)),
+                            InfoRow(l10n.serviceFee, t.fee == 0 ? l10n.free : formatNpr(t.fee)),
+                            const Divider(height: 18),
+                            Row(children: [
+                              Expanded(
+                                child: Text(t.isDeposit ? l10n.totalCredited : l10n.totalDebited,
                                     style: const TextStyle(
-                                        color: FbColors.accentDark, fontSize: 12, fontWeight: FontWeight.w600)),
-                              Text(
-                                  '${t.agent['location'] ?? ''} • Agent: ${t.agent['name'] ?? ''} '
-                                  '(${t.agent['agentId'] ?? ''})',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
-                              const SizedBox(height: 14),
-                              _stamp(t),
-                              const SizedBox(height: 14),
-                              const _DashedLine(),
-                              const SizedBox(height: 10),
-                              InfoRow('Reference', t.reference),
-                              InfoRow('Date (BS)', formatBsDateTime(t.confirmedAt ?? t.createdAt)),
-                              InfoRow('Date (AD)', formatNepalTime(t.confirmedAt ?? t.createdAt)),
-                              InfoRow('Service', t.service),
-                              InfoRow('Customer', t.customerName),
-                              InfoRow('Account', t.accountMasked),
-                              const SizedBox(height: 10),
-                              Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                    color: FbColors.primaryLight, borderRadius: BorderRadius.circular(14)),
-                                child: Column(children: [
-                                  InfoRow(t.isDeposit ? 'Cash deposited' : 'Cash paid out', formatNpr(t.amount)),
-                                  InfoRow('Service fee', t.fee == 0 ? 'Free' : formatNpr(t.fee)),
-                                  const Divider(height: 18),
-                                  Row(children: [
-                                    Expanded(
-                                      child: Text(t.totalLabel,
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.w800, fontSize: 16, color: FbColors.primary)),
-                                    ),
-                                    Text(formatNpr(t.total),
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.w800, fontSize: 22, color: FbColors.primary)),
-                                  ]),
-                                  const SizedBox(height: 4),
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text('In words: ${t.amountInWords}',
-                                        style: const TextStyle(
-                                            color: FbColors.accentDark, fontStyle: FontStyle.italic, fontSize: 12)),
-                                  ),
-                                ]),
+                                        fontWeight: FontWeight.w800, fontSize: 16, color: FbColors.primary)),
                               ),
-                              const SizedBox(height: 14),
-                              const _DashedLine(),
-                              const SizedBox(height: 10),
-                              if (t.status == 'confirmed')
-                                const Text('An SMS receipt was sent to the customer.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(fontSize: 12, color: FbColors.textMuted)),
-                            ],
-                          ),
+                              Text(formatNpr(t.total),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w800, fontSize: 22, color: FbColors.primary)),
+                            ]),
+                            const SizedBox(height: 4),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(l10n.inWords(t.amountInWords),
+                                  style: const TextStyle(
+                                      color: FbColors.accentDark, fontStyle: FontStyle.italic, fontSize: 12)),
+                            ),
+                          ]),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      if (_notice != null) ...[MessageBox(_notice!, error: false), const SizedBox(height: 12)],
-                      if (_error != null) ...[MessageBox(_error!), const SizedBox(height: 12)],
-                      if (t.status == 'confirmed') ...[
-                        FilledButton.icon(onPressed: _print, icon: const Icon(Icons.print_outlined), label: const Text('Print receipt')),
-                        const SizedBox(height: 8),
-                        OutlinedButton.icon(onPressed: _sms, icon: const Icon(Icons.sms_outlined), label: const Text('Send SMS receipt')),
-                        const SizedBox(height: 8),
-                        TextButton.icon(
-                          onPressed: _dispute,
-                          icon: const Icon(Icons.report_gmailerrorred, color: FbColors.danger),
-                          label: const Text('Report a problem', style: TextStyle(color: FbColors.danger)),
-                        ),
+                        const SizedBox(height: 14),
+                        const _DashedLine(),
+                        const SizedBox(height: 10),
+                        if (t.status == 'confirmed')
+                          Text(l10n.smsReceiptSentNote,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
                       ],
-                      const SizedBox(height: 8),
-                      OutlinedButton(onPressed: goBack, child: const Text('Done')),
-                    ],
+                    ),
                   ),
-          ),
-        ],
-      ),
+                ),
+                const SizedBox(height: 12),
+                if (_notice != null) ...[MessageBox(_notice!, error: false), const SizedBox(height: 12)],
+                if (_error != null) ...[MessageBox(_error!), const SizedBox(height: 12)],
+                if (t.status == 'confirmed') ...[
+                  FilledButton.icon(
+                      onPressed: _print, icon: const Icon(Icons.print_outlined), label: Text(l10n.printReceipt)),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                      onPressed: _sms, icon: const Icon(Icons.sms_outlined), label: Text(l10n.sendSmsReceipt)),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: _dispute,
+                    icon: const Icon(Icons.report_gmailerrorred, color: FbColors.danger),
+                    label: Text(l10n.reportProblem, style: const TextStyle(color: FbColors.danger)),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                OutlinedButton(onPressed: goBack, child: Text(l10n.done)),
+              ],
+            ),
     );
   }
 
@@ -236,8 +237,8 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Transaction confirmed',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: FbColors.primary)),
+              Text(context.l10n.transactionConfirmed,
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: FbColors.primary)),
               Text(t.reference, style: const TextStyle(color: FbColors.primary)),
             ]),
           ),
@@ -257,7 +258,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(ok ? Icons.check_circle_outline : Icons.cancel_outlined, color: color),
         const SizedBox(width: 6),
-        Text(t.statusLabel.toUpperCase(),
+        Text(context.l10n.status(t.status).toUpperCase(),
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 1, color: color)),
       ]),
     );

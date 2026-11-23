@@ -77,6 +77,7 @@ String formatNepalTime(String? iso) {
   return '${t.day} ${months[t.month - 1]} ${t.year}, ${two(t.hour)}:${two(t.minute)} NPT';
 }
 
+/// Default BS month names; screens pass the translated list from AppLocalizations.bsMonths.
 const _bsMonthNames = [
   'Baisakh', 'Jestha', 'Asar', 'Shrawan', 'Bhadra', 'Asoj', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra',
 ];
@@ -85,25 +86,25 @@ const _bsMonthNames = [
 DateTime _nepalTime(DateTime instant) => instant.toUtc().add(const Duration(hours: 5, minutes: 45));
 
 /// "8 Mangsir 2083" for a Nepal calendar date.
-String formatBsDate(DateTime nepalDate) {
+String formatBsDate(DateTime nepalDate, {List<String> bsMonths = _bsMonthNames}) {
   final bs = adToBs(nepalDate);
-  return '${bs.day} ${_bsMonthNames[bs.month - 1]} ${bs.year}';
+  return '${bs.day} ${bsMonths[bs.month - 1]} ${bs.year}';
 }
 
 /// Today in Nepal, in both calendars: "8 Mangsir 2083 • 22 Nov 2026".
-String todayBsAndAd() {
+String todayBsAndAd({List<String> bsMonths = _bsMonthNames}) {
   final t = _nepalTime(DateTime.now());
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return '${formatBsDate(t)} • ${t.day} ${months[t.month - 1]} ${t.year}';
+  return '${formatBsDate(t, bsMonths: bsMonths)} • ${t.day} ${months[t.month - 1]} ${t.year}';
 }
 
 /// An ISO time as a BS date and Nepal time: "24 Kartik 2081, 11:42 NPT".
-String formatBsDateTime(String? iso) {
+String formatBsDateTime(String? iso, {List<String> bsMonths = _bsMonthNames}) {
   final utc = iso == null ? null : DateTime.tryParse(iso);
   if (utc == null) return iso ?? '-';
   final t = _nepalTime(utc);
   String two(int v) => v.toString().padLeft(2, '0');
-  return '${formatBsDate(t)}, ${two(t.hour)}:${two(t.minute)} NPT';
+  return '${formatBsDate(t, bsMonths: bsMonths)}, ${two(t.hour)}:${two(t.minute)} NPT';
 }
 
 final _rng = Random.secure();

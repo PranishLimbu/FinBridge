@@ -6,7 +6,7 @@
 //                                     (customers, transactions, logs...) and start clean
 //   npm run firebase:setup -- --reference-only
 //                                     publish the rules and reload only the master data
-//                                     (address lists, occupations); other data is untouched
+//                                     (address lists, occupations, terminals); other data is untouched
 //
 // Uses serviceAccountKey.json (GOOGLE_APPLICATION_CREDENTIALS in .env). Before the first run,
 // enable Authentication -> Sign-in method -> Email/Password in the Firebase console.
@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../src/config');
 const { createFirestoreStore } = require('../src/db/firestoreStore');
-const { seed } = require('../src/seed');
+const { seed, seedTerminals } = require('../src/seed');
 const { importLocations } = require('../src/services/locationService');
 const { importOccupations } = require('../src/services/occupationService');
 const { getAuth } = require('firebase-admin/auth');
@@ -24,7 +24,7 @@ const { getSecurityRules } = require('firebase-admin/security-rules');
 const DEMO_PIN = '123456';
 const COLLECTIONS = [
   'agents', 'customers', 'accounts', 'transactions', 'idempotency', 'auditLogs', 'smsOutbox',
-  'eodReports', 'floatRequests', 'disputes', 'provinces', 'districts', 'localBodies', 'occupations',
+  'eodReports', 'floatRequests', 'disputes', 'provinces', 'districts', 'localBodies', 'occupations', 'terminals',
 ];
 
 // Same address the app signs in with (lib/api/api_client.dart, _email).
@@ -68,7 +68,9 @@ async function main() {
   if (process.argv.includes('--reference-only')) {
     const places = await importLocations(store);
     const jobs = await importOccupations(store);
-    console.log(`Loaded ${places.districts} districts, ${places.localBodies} municipalities and ${jobs} occupations.`);
+    const terminals = await seedTerminals(store);
+    console.log(`Loaded ${places.districts} districts, ${places.localBodies} municipalities, ${jobs} occupations`
+      + ` and ${terminals} terminals.`);
     return;
   }
 

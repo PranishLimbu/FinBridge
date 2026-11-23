@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../api/models.dart';
+import '../l10n/l10n.dart';
 import '../state/session.dart';
 import '../theme.dart';
 import '../utils/bs_date.dart';
@@ -72,8 +73,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   bool get _useOccupationList => _occupations != null && _occupations!.isNotEmpty;
 
+  // Fallback province names (sent to the server as data) if the location lists cannot load.
   static const _provinces = ['Koshi', 'Madhesh', 'Bagmati', 'Gandaki', 'Lumbini', 'Karnali', 'Sudurpashchim'];
-  static const _steps = ['Personal', 'Family', 'Address', 'Documents'];
+
+  AppLocalizations get l10n => context.l10n;
+  List<String> get _steps => [l10n.stepPersonal, l10n.stepFamily, l10n.stepAddress, l10n.stepDocuments];
+
+  /// Place name in the app's language: the Nepali name when shown in Nepali and one exists.
+  String _placeName(Place p) => context.isNepali && p.nameNe.isNotEmpty ? p.nameNe : p.name;
 
   @override
   void initState() {
@@ -105,18 +112,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   /// Checks the dropdowns on the current step; they are not form fields, so Form.validate misses them.
   bool _listsValid() {
     if (_step == 0 && _useOccupationList) {
-      setState(() => _occupationError = _occupationCode == null ? 'Choose an occupation' : null);
+      setState(() => _occupationError = _occupationCode == null ? l10n.chooseOccupation : null);
       if (_occupationError != null) {
-        if (_useLists) setState(() => _issueDistrictError = _issueDistrictId == null ? 'Choose the issue district' : null);
+        if (_useLists) setState(() => _issueDistrictError = _issueDistrictId == null ? l10n.chooseIssueDistrict : null);
         return false;
       }
     }
     if (!_useLists) return true;
     setState(() {
-      if (_step == 0) _issueDistrictError = _issueDistrictId == null ? 'Choose the issue district' : null;
+      if (_step == 0) _issueDistrictError = _issueDistrictId == null ? l10n.chooseIssueDistrict : null;
       if (_step == 2) {
-        _districtError = _districtId == null ? 'Choose a district' : null;
-        _localBodyError = _localBodyId == null ? 'Choose a municipality' : null;
+        _districtError = _districtId == null ? l10n.chooseDistrict : null;
+        _localBodyError = _localBodyId == null ? l10n.chooseMunicipality : null;
       }
     });
     return _step == 0 ? _issueDistrictError == null : _step != 2 || (_districtError == null && _localBodyError == null);
@@ -133,24 +140,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  String? _req(String? v) => (v == null || v.trim().isEmpty) ? 'Required' : null;
-  String? _name(String? v) =>
-      _req(v) ?? (RegExp(r"^[A-Za-z .'-]+$").hasMatch(v!.trim()) ? null : 'Use letters only');
-  /// Label for a mandatory field: "First name (पहिलो नाम) *".
-  String _m(String en, String ne) => '${bi(en, ne)} *';
+  String? _req(String? v) => (v == null || v.trim().isEmpty) ? l10n.required : null;
+  String? _name(String? v) => _req(v) ?? (RegExp(r"^[A-Za-z .'-]+$").hasMatch(v!.trim()) ? null : l10n.lettersOnly);
+
+  /// Label for a mandatory field: "First name *".
+  String _m(String label) => '$label *';
 
   String? _dobValidator(String? _) {
-    if (_dobAd == null) return 'Choose the date of birth';
-    if ((_age ?? 0) < 16) return 'The customer must be at least 16 years old';
+    if (_dobAd == null) return l10n.chooseDob;
+    if ((_age ?? 0) < 16) return l10n.minAge16;
     return null;
   }
 
   String? _issueDateValidator(String? v) {
     final d = NepaliDateTime.tryParse(v ?? '');
-    if (v == null || v.isEmpty || d == null) return 'Choose the issue date';
+    if (v == null || v.isEmpty || d == null) return l10n.chooseIssueDate;
     final dob = _dobAd == null ? null : adToBs(_dobAd!);
-    if (dob != null && d.isBefore(dob)) return 'Cannot be before the date of birth';
-    if (d.isAfter(todayBs())) return 'Cannot be in the future';
+    if (dob != null && d.isBefore(dob)) return l10n.notBeforeDob;
+    if (d.isAfter(todayBs())) return l10n.notInFuture;
     return null;
   }
 
@@ -168,7 +175,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       initialDate: _dobAd == null ? NepaliDateTime(today.year - 30) : adToBs(_dobAd!),
       firstDate: NepaliDateTime(1975),
       lastDate: today,
-      title: 'Date of birth (BS)',
+      title: context.l10n.dobBsPickerTitle,
     );
     if (d != null) _setDob(bsToAd(d));
   }
@@ -180,7 +187,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       initialDate: _dobAd ?? DateTime(today.year - 30),
       firstDate: DateTime(1918),
       lastDate: today,
-      helpText: 'Date of birth (AD)',
+      helpText: context.l10n.dobAdPickerTitle,
     );
     if (d != null) _setDob(d);
   }
@@ -195,7 +202,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       initialDate: initial,
       firstDate: first,
       lastDate: today,
-      title: 'Citizenship issue date (BS)',
+      title: context.l10n.issueDatePickerTitle,
     );
     if (d != null) setState(() => _issueBs.text = formatBs(d));
   }
@@ -222,11 +229,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _submit() async {
     if (!(_front && _back && _photo)) {
-      setState(() => _error = 'Capture both sides of the citizenship certificate and the customer’s photo');
+      setState(() => _error = l10n.documentsMissing);
       return;
     }
     if (!_consent) {
-      setState(() => _error = 'The customer must agree to the terms');
+      setState(() => _error = l10n.mustAgree);
       return;
     }
     setState(() {
@@ -274,15 +281,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Application submitted'),
-          content: Text('Customer ID: ${res['customerId']}\nAccount: ${res['accountMasked']}\n\n'
-              'The bank will check the details. Cash transactions work after approval.'),
-          actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+          title: Text(l10n.applicationSubmitted),
+          content: Text(l10n.applicationSubmittedBody('${res['customerId']}', '${res['accountMasked']}')),
+          actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.ok))],
         ),
       );
       if (mounted) Navigator.of(context).pop();
     } on ApiException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _error = l10n.error(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -309,25 +315,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Customer onboarding'),
+          title: Text(l10n.onboardingTitle),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            tooltip: 'Back',
+            tooltip: l10n.back,
             onPressed: _stepBack,
           ),
         ),
         body: Column(
           children: [
-            const SimulatedBanner(),
             _stepper(),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 8),
-                    child: Text('Fields marked * are required.',
-                        style: TextStyle(fontSize: 12, color: FbColors.textMuted)),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(l10n.requiredNote, style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
                   ),
                   Form(
                     key: _forms[_step],
@@ -342,19 +346,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   if (_error != null) ...[MessageBox(_error!), const SizedBox(height: 12)],
                   FilledButton(
                     onPressed: _busy ? null : (_step < 3 ? _next : _submit),
-                    child: Text(_busy ? 'Submitting…' : _step < 3 ? 'Continue to ${_steps[_step + 1]}' : 'Submit for bank review'),
+                    child: Text(_busy
+                        ? l10n.submitting
+                        : _step < 3
+                            ? l10n.continueTo(_steps[_step + 1])
+                            : l10n.submitForReview),
                   ),
                   if (_step > 0) ...[
                     const SizedBox(height: 8),
                     OutlinedButton(
                       onPressed: _busy ? null : _stepBack,
-                      child: const Text('Back'),
+                      child: Text(l10n.back),
                     ),
                   ] else ...[
                     const SizedBox(height: 8),
                     OutlinedButton(
                       onPressed: _busy ? null : () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
+                      child: Text(l10n.cancel),
                     ),
                   ],
                 ],
@@ -412,11 +420,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           onTap: onPick,
           decoration: InputDecoration(
             labelText: label,
-            hintText: 'Tap to choose',
+            hintText: context.l10n.tapToChoose,
             helperText: helper,
             suffixIcon: IconButton(
               icon: const Icon(Icons.calendar_month_outlined),
-              tooltip: 'Choose date',
+              tooltip: context.l10n.chooseDate,
               onPressed: onPick,
             ),
           ),
@@ -428,20 +436,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionCard(
-            title: 'Personal details',
+            title: l10n.personalDetails,
             child: Column(children: [
-              _field(_first, _m('First name', 'पहिलो नाम'), validator: _name),
-              _field(_middle, bi('Middle name (optional)', 'बीचको नाम')),
-              _field(_last, _m('Last name', 'थर'), validator: _name),
+              _field(_first, _m(l10n.firstName), validator: _name),
+              _field(_middle, l10n.middleNameOptional),
+              _field(_last, _m(l10n.lastName), validator: _name),
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DropdownButtonFormField<String>(
                   value: _gender,
-                  decoration: InputDecoration(labelText: _m('Gender', 'लिङ्ग')),
-                  items: const [
-                    DropdownMenuItem(value: 'male', child: Text('Male (पुरुष)')),
-                    DropdownMenuItem(value: 'female', child: Text('Female (महिला)')),
-                    DropdownMenuItem(value: 'other', child: Text('Other (अन्य)')),
+                  decoration: InputDecoration(labelText: _m(l10n.gender)),
+                  items: [
+                    DropdownMenuItem(value: 'male', child: Text(l10n.male)),
+                    DropdownMenuItem(value: 'female', child: Text(l10n.female)),
+                    DropdownMenuItem(value: 'other', child: Text(l10n.otherGender)),
                   ],
                   onChanged: (v) => setState(() => _gender = v!),
                 ),
@@ -450,23 +458,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DropdownButtonFormField<String>(
                   value: _marital,
-                  decoration: InputDecoration(labelText: _m('Marital status', 'वैवाहिक स्थिति')),
-                  items: const [
-                    DropdownMenuItem(value: 'single', child: Text('Single (अविवाहित)')),
-                    DropdownMenuItem(value: 'married', child: Text('Married (विवाहित)')),
-                    DropdownMenuItem(value: 'widowed', child: Text('Widowed')),
-                    DropdownMenuItem(value: 'divorced', child: Text('Divorced')),
+                  decoration: InputDecoration(labelText: _m(l10n.maritalStatus)),
+                  items: [
+                    DropdownMenuItem(value: 'single', child: Text(l10n.single)),
+                    DropdownMenuItem(value: 'married', child: Text(l10n.married)),
+                    DropdownMenuItem(value: 'widowed', child: Text(l10n.widowed)),
+                    DropdownMenuItem(value: 'divorced', child: Text(l10n.divorced)),
                   ],
                   onChanged: (v) => setState(() => _marital = v!),
                 ),
               ),
-              _dateField(_dobBs, _m('Date of birth, BS', 'जन्म मिति वि.सं.'), _pickDobBs, validator: _dobValidator),
-              _dateField(_dobAdText, _m('Date of birth, AD', 'जन्म मिति ई.सं.'), _pickDobAd,
-                  validator: _dobValidator, helper: _dobAd == null ? null : 'Age ${_age ?? '-'}'),
+              _dateField(_dobBs, _m(l10n.dobBs), _pickDobBs, validator: _dobValidator),
+              _dateField(_dobAdText, _m(l10n.dobAd), _pickDobAd,
+                  validator: _dobValidator, helper: _dobAd == null ? null : l10n.ageYears(_age ?? 0)),
               if (_useOccupationList)
                 _placeMenu(
                   key: const ValueKey('occupation'),
-                  label: _m('Occupation', 'पेशा'),
+                  label: _m(l10n.occupation),
                   places: _occupations!,
                   selected: _occupationCode,
                   error: _occupationError,
@@ -476,28 +484,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   }),
                 )
               else
-                _field(_occupation, _m('Occupation', 'पेशा'), validator: _req, hint: 'e.g. Agriculture / Farmer'),
-              _field(_mobile, _m('Mobile number', 'मोबाइल नम्बर'),
+                _field(_occupation, _m(l10n.occupation), validator: _req, hint: l10n.occupationHint),
+              _field(_mobile, _m(l10n.mobileNumber),
                   keyboard: TextInputType.phone,
                   maxLength: 10,
-                  validator: (v) => RegExp(r'^9[78]\d{8}$').hasMatch(v ?? '') ? null : '10 digits starting 97 or 98'),
+                  validator: (v) => RegExp(r'^9[78]\d{8}$').hasMatch(v ?? '') ? null : l10n.mobileError),
             ]),
           ),
           const SizedBox(height: 12),
           SectionCard(
-            title: 'Citizenship',
+            title: l10n.citizenship,
             child: Column(children: [
-              _field(_citizenship, _m('Citizenship certificate no.', 'नागरिकता नं.'),
+              _field(_citizenship, _m(l10n.citizenshipNo),
                   hint: '27-01-78-04912',
                   validator: (v) => RegExp(r'^\d{1,3}(-\d{1,6}){1,4}$').hasMatch(v?.trim() ?? '')
                       ? null
-                      : 'Use the format printed on the certificate'),
-              _dateField(_issueBs, _m('Issue date, BS', 'जारी मिति वि.सं.'), _pickIssueDate,
+                      : l10n.citizenshipFormatError),
+              _dateField(_issueBs, _m(l10n.issueDateBs), _pickIssueDate,
                   validator: _issueDateValidator),
               if (_useLists)
                 _placeMenu(
                   key: const ValueKey('issue-district'),
-                  label: _m('Issue district', 'जारी जिल्ला'),
+                  label: _m(l10n.issueDistrict),
                   places: _locs!.districts,
                   selected: _issueDistrictId,
                   error: _issueDistrictError,
@@ -507,23 +515,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   }),
                 )
               else
-                _field(_issueDistrict, _m('Issue district', 'जारी जिल्ला'), validator: _req),
-              _field(_pan, bi('PAN (optional)', 'स्थायी लेखा नं.'),
+                _field(_issueDistrict, _m(l10n.issueDistrict), validator: _req),
+              _field(_pan, l10n.panOptional,
                   keyboard: TextInputType.number,
                   maxLength: 9,
-                  validator: (v) => (v == null || v.isEmpty || RegExp(r'^\d{9}$').hasMatch(v)) ? null : 'PAN has 9 digits'),
+                  validator: (v) => (v == null || v.isEmpty || RegExp(r'^\d{9}$').hasMatch(v)) ? null : l10n.panError),
             ]),
           ),
         ],
       );
 
   Widget _family() => SectionCard(
-        title: 'Family details',
+        title: l10n.familyDetails,
         child: Column(children: [
-          _field(_father, _m('Father’s name', 'बुबाको नाम'), validator: _name),
-          _field(_mother, _m('Mother’s name', 'आमाको नाम'), validator: _name),
-          _field(_grandfather, _m('Grandfather’s name', 'हजुरबुबाको नाम'), validator: _name),
-          if (_marital == 'married') _field(_spouse, _m('Spouse’s name', 'पति/पत्नीको नाम'), validator: _name),
+          _field(_father, _m(l10n.fatherName), validator: _name),
+          _field(_mother, _m(l10n.motherName), validator: _name),
+          _field(_grandfather, _m(l10n.grandfatherName), validator: _name),
+          if (_marital == 'married') _field(_spouse, _m(l10n.spouseName), validator: _name),
         ]),
       );
 
@@ -548,32 +556,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           enableFilter: true,
           requestFocusOnTap: true,
           label: Text(label),
-          hintText: hint ?? 'Type to search',
+          hintText: hint ?? context.l10n.typeToSearch,
           errorText: error,
           dropdownMenuEntries: [
             for (final p in places)
-              DropdownMenuEntry(
-                value: p.id,
-                label: p.name,
-                labelWidget: Text(p.nameNe.isEmpty ? p.name : '${p.name}  (${p.nameNe})'),
-              ),
+              DropdownMenuEntry(value: p.id, label: _placeName(p)),
           ],
           onSelected: onSelected,
         ),
       );
 
   Widget _address() => SectionCard(
-        title: 'Permanent address',
+        title: l10n.permanentAddress,
         child: Column(children: [
           if (_useLists) ..._addressLists() else ..._addressText(),
-          _field(_ward, _m('Ward no.', 'वडा नं.'),
+          _field(_ward, _m(l10n.wardNo),
               keyboard: TextInputType.number,
               maxLength: 2,
               validator: (v) {
                 final n = int.tryParse(v ?? '');
-                return (n == null || n < 1 || n > 35) ? 'Ward between 1 and 35' : null;
+                return (n == null || n < 1 || n > 35) ? l10n.wardError : null;
               }),
-          _field(_tole, bi('Tole / street (optional)', 'टोल')),
+          _field(_tole, l10n.toleOptional),
         ]),
       );
 
@@ -586,9 +590,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         padding: const EdgeInsets.only(bottom: 12),
         child: DropdownButtonFormField<String>(
           value: _provinceId,
-          decoration: InputDecoration(labelText: _m('Province', 'प्रदेश')),
+          decoration: InputDecoration(labelText: _m(l10n.province)),
           items: [
-            for (final p in locs.provinces) DropdownMenuItem(value: p.id, child: Text('${p.name}  (${p.nameNe})')),
+            for (final p in locs.provinces) DropdownMenuItem(value: p.id, child: Text(_placeName(p))),
           ],
           onChanged: (v) => setState(() {
             if (v == _provinceId) return;
@@ -601,7 +605,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       // Keys include the parent so a child list starts empty whenever its parent changes.
       _placeMenu(
         key: ValueKey('district-$_provinceId'),
-        label: _m('District', 'जिल्ला'),
+        label: _m(l10n.district),
         places: districts,
         selected: _districtId,
         error: _districtError,
@@ -613,11 +617,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       _placeMenu(
         key: ValueKey('local-body-$_districtId'),
-        label: _m('Municipality / rural municipality', 'नगरपालिका / गाउँपालिका'),
+        label: _m(l10n.municipality),
         places: bodies,
         selected: _localBodyId,
         error: _localBodyError,
-        hint: _districtId == null ? 'Choose the district first' : '${bodies.length} in this district — type to search',
+        hint: _districtId == null ? l10n.chooseDistrictFirst : l10n.inThisDistrict(bodies.length),
         onSelected: (id) => setState(() {
           _localBodyId = id;
           _localBodyError = null;
@@ -633,39 +637,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           padding: const EdgeInsets.only(bottom: 12),
           child: DropdownButtonFormField<String>(
             value: _province,
-            decoration: InputDecoration(labelText: _m('Province', 'प्रदेश')),
+            decoration: InputDecoration(labelText: _m(l10n.province)),
             items: [for (final p in _provinces) DropdownMenuItem(value: p, child: Text(p))],
             onChanged: (v) => setState(() => _province = v!),
           ),
         ),
-        _field(_district, _m('District', 'जिल्ला'), validator: _req),
-        _field(_municipality, _m('Municipality / rural municipality', 'नगरपालिका / गाउँपालिका'), validator: _req),
+        _field(_district, _m(l10n.district), validator: _req),
+        _field(_municipality, _m(l10n.municipality), validator: _req),
       ];
 
   Widget _documents() => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionCard(
-            title: 'Documents',
+            title: l10n.documents,
             child: Column(children: [
-              const Text(
-                'Tick each document after checking the original.',
-                style: TextStyle(fontSize: 12, color: FbColors.textMuted),
-              ),
+              Text(l10n.tickDocuments, style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
               CheckboxListTile(
                 value: _front,
                 onChanged: (v) => setState(() => _front = v!),
-                title: const Text('Citizenship certificate – front *'),
+                title: Text(_m(l10n.citizenshipFront)),
               ),
               CheckboxListTile(
                 value: _back,
                 onChanged: (v) => setState(() => _back = v!),
-                title: const Text('Citizenship certificate – back *'),
+                title: Text(_m(l10n.citizenshipBack)),
               ),
               CheckboxListTile(
                 value: _photo,
                 onChanged: (v) => setState(() => _photo = v!),
-                title: const Text('Customer photo *'),
+                title: Text(_m(l10n.customerPhoto)),
               ),
             ]),
           ),
@@ -675,7 +676,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               contentPadding: EdgeInsets.zero,
               value: _consent,
               onChanged: (v) => setState(() => _consent = v!),
-              title: const Text('Customer agrees to the account terms. *'),
+              title: Text(_m(l10n.consentTerms)),
             ),
           ),
         ],

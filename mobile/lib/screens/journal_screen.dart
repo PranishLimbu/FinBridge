@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../api/models.dart';
+import '../l10n/l10n.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
 import 'dashboard_screen.dart' show TxnTile;
@@ -52,7 +53,7 @@ class JournalScreenState extends State<JournalScreen> {
       }) as Map<String, dynamic>;
       setState(() => _items = (res['results'] as List).map((t) => Txn.fromJson(t as Map<String, dynamic>)).toList());
     } on ApiException catch (e) {
-      setState(() => _error = e.message);
+      if (mounted) setState(() => _error = context.l10n.error(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -72,18 +73,18 @@ class JournalScreenState extends State<JournalScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: const Text('Journal'), actions: [
-        IconButton(onPressed: _load, icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
+      appBar: AppBar(title: Text(l10n.journalTitle), actions: [
+        IconButton(onPressed: _load, icon: const Icon(Icons.refresh), tooltip: l10n.refresh),
       ]),
       body: Column(
         children: [
-          const SimulatedBanner(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: TextField(
               controller: _q,
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), labelText: 'Customer name or reference'),
+              decoration: InputDecoration(prefixIcon: const Icon(Icons.search), labelText: l10n.journalSearchHint),
               onSubmitted: (_) => _load(),
             ),
           ),
@@ -91,14 +92,14 @@ class JournalScreenState extends State<JournalScreen> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(children: [
-              _chip('All', null, _type, (v) => setState(() => _type = v)),
-              _chip('Deposits', 'deposit', _type, (v) => setState(() => _type = v)),
-              _chip('Withdrawals', 'withdrawal', _type, (v) => setState(() => _type = v)),
+              _chip(l10n.filterAll, null, _type, (v) => setState(() => _type = v)),
+              _chip(l10n.filterDeposits, 'deposit', _type, (v) => setState(() => _type = v)),
+              _chip(l10n.filterWithdrawals, 'withdrawal', _type, (v) => setState(() => _type = v)),
               const SizedBox(width: 12),
-              _chip('Any status', null, _status, (v) => setState(() => _status = v)),
-              _chip('Confirmed', 'confirmed', _status, (v) => setState(() => _status = v)),
-              _chip('Pending OTP', 'awaiting_otp', _status, (v) => setState(() => _status = v)),
-              _chip('Cancelled', 'cancelled', _status, (v) => setState(() => _status = v)),
+              _chip(l10n.filterAnyStatus, null, _status, (v) => setState(() => _status = v)),
+              _chip(l10n.statusConfirmed, 'confirmed', _status, (v) => setState(() => _status = v)),
+              _chip(l10n.statusPendingOtp, 'awaiting_otp', _status, (v) => setState(() => _status = v)),
+              _chip(l10n.statusCancelled, 'cancelled', _status, (v) => setState(() => _status = v)),
             ]),
           ),
           if (_loading) const LinearProgressIndicator(),
@@ -107,8 +108,9 @@ class JournalScreenState extends State<JournalScreen> {
             child: RefreshIndicator(
               onRefresh: _load,
               child: _items.isEmpty && !_loading
-                  ? ListView(children: const [
-                      Padding(padding: EdgeInsets.all(32), child: Center(child: Text('No transactions match these filters.'))),
+                  ? ListView(children: [
+                      Padding(
+                          padding: const EdgeInsets.all(32), child: Center(child: Text(l10n.noTransactionsMatch))),
                     ])
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
