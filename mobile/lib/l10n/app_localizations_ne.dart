@@ -1287,4 +1287,57 @@ class AppLocalizationsNe extends AppLocalizations {
   String limitUsedOf(String percent, String limit) {
     return '$limit सीमाको $percent%';
   }
+
+  @override
+  String get customerDetailsTitle => 'ग्राहकको विवरण';
+
+  @override
+  String get viewDetails => 'विवरण हेर्नुहोस्';
+
+  @override
+  String get personalInformation => 'व्यक्तिगत जानकारी';
+
+  @override
+  String get identity => 'परिचय';
+
+  @override
+  String get middleName => 'बीचको नाम';
+
+  @override
+  String get mobile => 'मोबाइल';
+
+  @override
+  String get pan => 'स्थायी लेखा नं.';
+
+  @override
+  String get father => 'बुबा';
+
+  @override
+  String get mother => 'आमा';
+
+  @override
+  String get grandfather => 'हजुरबुबा';
+
+  @override
+  String get spouse => 'पति/पत्नी';
+
+  @override
+  String get ward => 'वडा';
+
+  @override
+  String wardNumber(String number) {
+    return 'वडा $number';
+  }
+
+  @override
+  String get tole => 'टोल';
+
+  @override
+  String get fullAddress => 'पूरा ठेगाना';
+
+  @override
+  String get accounts => 'खाताहरू';
+
+  @override
+  String get noAccounts => 'कुनै खाता छैन';
 }

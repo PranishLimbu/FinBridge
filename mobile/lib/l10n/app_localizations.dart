@@ -2371,6 +2371,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{percent}% of {limit} limit'**
   String limitUsedOf(String percent, String limit);
+
+  /// No description provided for @customerDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer details'**
+  String get customerDetailsTitle;
+
+  /// No description provided for @viewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View details'**
+  String get viewDetails;
+
+  /// No description provided for @personalInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal information'**
+  String get personalInformation;
+
+  /// No description provided for @identity.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity'**
+  String get identity;
+
+  /// No description provided for @middleName.
+  ///
+  /// In en, this message translates to:
+  /// **'Middle name'**
+  String get middleName;
+
+  /// No description provided for @mobile.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile'**
+  String get mobile;
+
+  /// No description provided for @pan.
+  ///
+  /// In en, this message translates to:
+  /// **'PAN'**
+  String get pan;
+
+  /// No description provided for @father.
+  ///
+  /// In en, this message translates to:
+  /// **'Father'**
+  String get father;
+
+  /// No description provided for @mother.
+  ///
+  /// In en, this message translates to:
+  /// **'Mother'**
+  String get mother;
+
+  /// No description provided for @grandfather.
+  ///
+  /// In en, this message translates to:
+  /// **'Grandfather'**
+  String get grandfather;
+
+  /// No description provided for @spouse.
+  ///
+  /// In en, this message translates to:
+  /// **'Spouse'**
+  String get spouse;
+
+  /// No description provided for @ward.
+  ///
+  /// In en, this message translates to:
+  /// **'Ward'**
+  String get ward;
+
+  /// No description provided for @wardNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Ward {number}'**
+  String wardNumber(String number);
+
+  /// No description provided for @tole.
+  ///
+  /// In en, this message translates to:
+  /// **'Tole'**
+  String get tole;
+
+  /// No description provided for @fullAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Full address'**
+  String get fullAddress;
+
+  /// No description provided for @accounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts'**
+  String get accounts;
+
+  /// No description provided for @noAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'No accounts'**
+  String get noAccounts;
 }
 
 class _AppLocalizationsDelegate

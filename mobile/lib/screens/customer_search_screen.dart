@@ -92,7 +92,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                   Expanded(child: Text(c.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700))),
                   IconButton(
                     icon: const Icon(Icons.visibility_outlined),
-                    tooltip: 'View details',
+                    tooltip: context.l10n.viewDetails,
                     color: FbColors.primary,
                     onPressed: () {
                       Navigator.pop(ctx);

@@ -396,5 +396,22 @@
   "allCaughtUp": "सबै हेरिसकियो।",
   "sendGetCash": "नगद पठाउनुहोस् / लिनुहोस्",
   "cashInHandLabel": "हातमा नगद",
-  "limitUsedOf": "{limit} सीमाको {percent}%"
+  "limitUsedOf": "{limit} सीमाको {percent}%",
+  "customerDetailsTitle": "ग्राहकको विवरण",
+  "viewDetails": "विवरण हेर्नुहोस्",
+  "personalInformation": "व्यक्तिगत जानकारी",
+  "identity": "परिचय",
+  "middleName": "बीचको नाम",
+  "mobile": "मोबाइल",
+  "pan": "स्थायी लेखा नं.",
+  "father": "बुबा",
+  "mother": "आमा",
+  "grandfather": "हजुरबुबा",
+  "spouse": "पति/पत्नी",
+  "ward": "वडा",
+  "wardNumber": "वडा {number}",
+  "tole": "टोल",
+  "fullAddress": "पूरा ठेगाना",
+  "accounts": "खाताहरू",
+  "noAccounts": "कुनै खाता छैन"
 }
