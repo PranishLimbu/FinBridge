@@ -31,6 +31,13 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
   bool _loading = false;
   String? _error;
   bool _searched = false;
+  bool _showingMine = true; // the empty-box list of this agent's own customers
+
+  @override
+  void initState() {
+    super.initState();
+    _search();
+  }
 
   @override
   void dispose() {
@@ -47,25 +54,22 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
   Future<void> _search() async {
     final l10n = context.l10n;
     final q = _query.text.trim();
-    if (q.length < 2) {
-      setState(() {
-        _results = [];
-        _searched = false;
-      });
-      return;
-    }
+    // One character is too little to search, so the agent's own customers stay on screen.
+    final mine = q.length < 2;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final res = await context.read<Session>().api.get('/customers', query: {'q': q}) as Map<String, dynamic>;
+      final res = await context.read<Session>().api.get('/customers', query: {'q': mine ? '' : q}) as Map<String, dynamic>;
+      if (!mounted || q != _query.text.trim()) return; // a newer search has started
       setState(() {
         _results = (res['results'] as List).map((c) => CustomerSummary.fromJson(c as Map<String, dynamic>)).toList();
+        _showingMine = mine;
         _searched = true;
       });
     } on ApiException catch (e) {
-      setState(() => _error = l10n.error(e));
+      if (mounted) setState(() => _error = l10n.error(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -160,7 +164,10 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
               foregroundColor: Colors.white,
               icon: const Icon(Icons.person_add_alt),
               label: Text(l10n.newCustomer),
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OnboardingScreen())),
+              onPressed: () async {
+                await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OnboardingScreen()));
+                if (mounted) _search();
+              },
             ),
       body: Column(
         children: [
@@ -173,7 +180,8 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
               onSubmitted: (_) => _search(),
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.search),
-                labelText: l10n.searchHint,
+                labelText: l10n.searchLabel,
+                hintText: l10n.searchHint,
                 suffixIcon: _query.text.isEmpty
                     ? null
                     : IconButton(
@@ -195,7 +203,11 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(24),
                       child: Text(
-                        _searched ? l10n.noCustomerFound : l10n.searchPrompt,
+                        !_searched
+                            ? l10n.loadingCustomers
+                            : _showingMine
+                                ? l10n.noOwnCustomers
+                                : l10n.noCustomerFound,
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: FbColors.textMuted),
                       ),
@@ -203,10 +215,16 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-                    itemCount: _results.length,
+                    itemCount: _results.length + 1,
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (_, i) {
-                      final c = _results[i];
+                      if (i == 0) {
+                        return Text(
+                          _showingMine ? l10n.yourCustomers(_results.length) : l10n.customersFound(_results.length),
+                          style: const TextStyle(fontWeight: FontWeight.w700, color: FbColors.textMuted),
+                        );
+                      }
+                      final c = _results[i - 1];
                       return Card(
                         child: ListTile(
                           onTap: () => _tap(c),

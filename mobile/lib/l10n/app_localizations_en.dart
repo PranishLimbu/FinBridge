@@ -251,7 +251,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get findCustomer => 'Find customer';
 
   @override
-  String get findCustomerSub => 'Mobile, account or name';
+  String get findCustomerSub => 'Name, mobile, account or ID';
 
   @override
   String get todaysTransactions => 'Today’s transactions';
@@ -306,7 +306,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get findCustomerStepTitle => 'Step 1: Find customer';
 
   @override
-  String get searchHint => 'Mobile, account, citizenship no. or name';
+  String get searchHint =>
+      'Name, part of a mobile / citizenship no., account no. or ID';
 
   @override
   String get searchPrompt =>
@@ -1100,7 +1101,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get documentsMissing =>
-      'Capture both sides of the citizenship certificate and the customer’s photo';
+      'Add both sides of the citizenship certificate and the customer’s photo';
 
   @override
   String get mustAgree => 'The customer must agree to the terms';
@@ -1381,4 +1382,48 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errKycNotOpened =>
       'Open the application and check the details and documents first';
+
+  @override
+  String get searchLabel => 'Search customer';
+
+  @override
+  String get loadingCustomers => 'Loading your customers…';
+
+  @override
+  String get noOwnCustomers =>
+      'You have not onboarded any customers yet. Type above to find an existing customer, or tap New customer.';
+
+  @override
+  String yourCustomers(int count) {
+    return 'Your customers ($count)';
+  }
+
+  @override
+  String customersFound(int count) {
+    return '$count found';
+  }
+
+  @override
+  String get documentsHelp =>
+      'Take a clear photo with the camera, or upload an image file (JPG, PNG or WebP). Images are shrunk automatically and saved securely for the bank supervisor to check.';
+
+  @override
+  String get takePhoto => 'Take photo';
+
+  @override
+  String get retakePhoto => 'Retake';
+
+  @override
+  String get uploadFile => 'Upload file';
+
+  @override
+  String get notAddedYet => 'Not added yet';
+
+  @override
+  String get removeFile => 'Remove';
+
+  @override
+  String imageError(String message) {
+    return 'Could not get the image: $message';
+  }
 }

@@ -96,6 +96,13 @@ service cloud.firestore {
         && captured(incoming().documents, 'citizenshipFront')
         && captured(incoming().documents, 'citizenshipBack')
         && captured(incoming().documents, 'photo')
+        // The three KYC images are saved in the same write (see customerDocuments below).
+        && incoming().documents.citizenshipFront.ref == 'customerDocuments/' + customerId + '_citizenshipFront'
+        && incoming().documents.citizenshipBack.ref == 'customerDocuments/' + customerId + '_citizenshipBack'
+        && incoming().documents.photo.ref == 'customerDocuments/' + customerId + '_photo'
+        && existsAfter(path('customerDocuments', customerId + '_citizenshipFront'))
+        && existsAfter(path('customerDocuments', customerId + '_citizenshipBack'))
+        && existsAfter(path('customerDocuments', customerId + '_photo'))
         && !('kycViewedBy' in incoming());
 
       // A supervisor opening an application for review adds themself to kycViewedBy.
@@ -132,6 +139,23 @@ service cloud.firestore {
         return docs is map && kind in docs
           && (docs[kind] == true || (docs[kind] is map && docs[kind].get('captured', false) == true));
       }
+    }
+
+    // KYC document images (citizenship certificate front/back, customer photo), stored as bytes.
+    // Only the agent who onboarded the customer may add them (once, with the customer) and read
+    // them; supervisors may read them to review KYC. They are never edited or deleted.
+    match /customerDocuments/{docId} {
+      allow read: if signedIn() && (resource.data.agentId == me() || isSupervisor());
+
+      allow create: if activeAgent()
+        && incoming().agentId == me()
+        && incoming().kind in ['citizenshipFront', 'citizenshipBack', 'photo']
+        && docId == incoming().customerId + '_' + incoming().kind
+        && incoming().contentType in ['image/jpeg', 'image/png', 'image/webp']
+        && incoming().data is bytes
+        && incoming().data.size() > 0 && incoming().data.size() <= 600 * 1024
+        && incoming().size == incoming().data.size()
+        && getAfter(path('customers', incoming().customerId)).data.createdByAgent == me();
     }
 
     match /accounts/{accountNo} {

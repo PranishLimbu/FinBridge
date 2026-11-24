@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:nepali_utils/nepali_utils.dart';
 import 'package:provider/provider.dart';
 
@@ -8,6 +9,7 @@ import '../l10n/l10n.dart';
 import '../state/session.dart';
 import '../theme.dart';
 import '../utils/age.dart';
+import '../utils/picked_doc.dart';
 import '../utils/bs_date.dart';
 import '../widgets/bs_date_picker.dart';
 import '../widgets/common.dart';
@@ -56,7 +58,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _ward = TextEditingController();
   final _tole = TextEditingController();
   // Documents
-  bool _front = false, _back = false, _photo = false, _consent = false;
+  PickedDoc? _front, _back, _photo;
+  bool _consent = false;
+  final _picker = ImagePicker();
 
   // Address lists from the server. Until they load (or if they cannot), the plain text fields
   // above are used instead, so onboarding never gets stuck.
@@ -223,7 +227,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   Future<void> _submit() async {
-    if (!(_front && _back && _photo)) {
+    if (_front == null || _back == null || _photo == null) {
       setState(() => _error = l10n.documentsMissing);
       return;
     }
@@ -641,28 +645,90 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         _field(_municipality, _m(l10n.municipality), validator: _req),
       ];
 
+  /// Lets the agent take a photo with the camera or choose an existing image file.
+  Future<void> _pickDoc(ImageSource source, void Function(PickedDoc) assign) async {
+    try {
+      final x = await _picker.pickImage(
+        source: source,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 55,
+      );
+      if (x == null) return;
+      final bytes = await x.readAsBytes();
+      final mime = x.mimeType ?? _mimeFromName(x.name);
+      if (!mounted) return;
+      setState(() {
+        _error = null;
+        assign(PickedDoc(bytes: bytes, name: x.name, contentType: mime));
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = l10n.imageError('$e'));
+    }
+  }
+
+  String _mimeFromName(String name) {
+    final n = name.toLowerCase();
+    if (n.endsWith('.png')) return 'image/png';
+    if (n.endsWith('.webp')) return 'image/webp';
+    return 'image/jpeg';
+  }
+
+  Widget _docTile(String title, PickedDoc? doc, void Function(PickedDoc?) set) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        if (doc != null)
+          Row(children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.memory(doc.bytes, width: 88, height: 64, fit: BoxFit.cover),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text('${doc.name}\n${(doc.bytes.length / 1024).round()} KB',
+                  style: const TextStyle(fontSize: 12, color: FbColors.textMuted), maxLines: 2, overflow: TextOverflow.ellipsis),
+            ),
+            IconButton(tooltip: l10n.removeFile, onPressed: _busy ? null : () => setState(() => set(null)), icon: const Icon(Icons.close)),
+          ])
+        else
+          Text(l10n.notAddedYet, style: TextStyle(fontSize: 12, color: FbColors.danger)),
+        const SizedBox(height: 6),
+        Row(children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _busy ? null : () => _pickDoc(ImageSource.camera, set),
+              icon: const Icon(Icons.photo_camera_outlined),
+              label: Text(doc == null ? l10n.takePhoto : l10n.retakePhoto),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _busy ? null : () => _pickDoc(ImageSource.gallery, set),
+              icon: const Icon(Icons.upload_file_outlined),
+              label: Text(l10n.uploadFile),
+            ),
+          ),
+        ]),
+      ]),
+    );
+  }
+
   Widget _documents() => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionCard(
             title: l10n.documents,
             child: Column(children: [
-              Text(l10n.tickDocuments, style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
-              CheckboxListTile(
-                value: _front,
-                onChanged: (v) => setState(() => _front = v!),
-                title: Text(_m(l10n.citizenshipFront)),
-              ),
-              CheckboxListTile(
-                value: _back,
-                onChanged: (v) => setState(() => _back = v!),
-                title: Text(_m(l10n.citizenshipBack)),
-              ),
-              CheckboxListTile(
-                value: _photo,
-                onChanged: (v) => setState(() => _photo = v!),
-                title: Text(_m(l10n.customerPhoto)),
-              ),
+              Text(l10n.documentsHelp, style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
+              _docTile(_m(l10n.citizenshipFront), _front, (d) => _front = d),
+              const Divider(height: 8),
+              _docTile(_m(l10n.citizenshipBack), _back, (d) => _back = d),
+              const Divider(height: 8),
+              _docTile(_m(l10n.customerPhoto), _photo, (d) => _photo = d),
             ]),
           ),
           const SizedBox(height: 12),

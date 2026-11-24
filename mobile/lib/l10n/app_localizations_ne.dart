@@ -251,7 +251,7 @@ class AppLocalizationsNe extends AppLocalizations {
   String get findCustomer => 'ग्राहक खोज्नुहोस्';
 
   @override
-  String get findCustomerSub => 'मोबाइल, खाता वा नाम';
+  String get findCustomerSub => 'नाम, मोबाइल, खाता वा आईडी';
 
   @override
   String get todaysTransactions => 'आजका कारोबार';
@@ -306,7 +306,8 @@ class AppLocalizationsNe extends AppLocalizations {
   String get findCustomerStepTitle => 'चरण १: ग्राहक खोज्नुहोस्';
 
   @override
-  String get searchHint => 'मोबाइल, खाता, नागरिकता नं. वा नाम';
+  String get searchHint =>
+      'नाम, मोबाइल / नागरिकता नं. को केही भाग, खाता नं. वा आईडी';
 
   @override
   String get searchPrompt => 'मोबाइल, खाता, नागरिकता नं. वा नामबाट खोज्नुहोस्।';
@@ -1096,7 +1097,8 @@ class AppLocalizationsNe extends AppLocalizations {
   String get lettersOnly => 'अक्षर मात्र प्रयोग गर्नुहोस्';
 
   @override
-  String get documentsMissing => 'नागरिकताका दुवै भाग र ग्राहकको फोटो लिनुहोस्';
+  String get documentsMissing =>
+      'नागरिकताका दुवै भाग र ग्राहकको फोटो थप्नुहोस्';
 
   @override
   String get mustAgree => 'ग्राहक सर्तहरूमा सहमत हुनुपर्छ';
@@ -1369,4 +1371,48 @@ class AppLocalizationsNe extends AppLocalizations {
 
   @override
   String get errKycNotOpened => 'पहिले आवेदन खोलेर विवरण र कागजात जाँच्नुहोस्';
+
+  @override
+  String get searchLabel => 'ग्राहक खोज्नुहोस्';
+
+  @override
+  String get loadingCustomers => 'तपाईंका ग्राहकहरू लोड हुँदैछ…';
+
+  @override
+  String get noOwnCustomers =>
+      'तपाईंले अझै कुनै ग्राहक दर्ता गर्नुभएको छैन। माथि टाइप गरेर खोज्नुहोस्, वा नयाँ ग्राहक थिच्नुहोस्।';
+
+  @override
+  String yourCustomers(int count) {
+    return 'तपाईंका ग्राहकहरू ($count)';
+  }
+
+  @override
+  String customersFound(int count) {
+    return '$count भेटियो';
+  }
+
+  @override
+  String get documentsHelp =>
+      'क्यामेराले स्पष्ट फोटो खिच्नुहोस्, वा तस्बिर फाइल (JPG, PNG वा WebP) अपलोड गर्नुहोस्। तस्बिर आफैं सानो बनाइन्छ र बैंक सुपरभाइजरले हेर्नका लागि सुरक्षित राखिन्छ।';
+
+  @override
+  String get takePhoto => 'फोटो खिच्नुहोस्';
+
+  @override
+  String get retakePhoto => 'फेरि खिच्नुहोस्';
+
+  @override
+  String get uploadFile => 'फाइल अपलोड गर्नुहोस्';
+
+  @override
+  String get notAddedYet => 'अझै थपिएको छैन';
+
+  @override
+  String get removeFile => 'हटाउनुहोस्';
+
+  @override
+  String imageError(String message) {
+    return 'तस्बिर लिन सकिएन: $message';
+  }
 }

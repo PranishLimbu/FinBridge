@@ -1,13 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../utils/age.dart';
+import '../utils/picked_doc.dart';
 import 'money.dart';
+
+/// Largest KYC image accepted. A Firestore document is limited to 1 MiB, so keep well under it
+/// (matches firestore.rules).
+const _maxDocBytes = 600 * 1024;
 
 /// An error from a FinBridge request: a broken business rule, a refused permission, or a
 /// network problem. [code] matches the codes the old Node API used, so screens are unchanged.
@@ -124,6 +130,7 @@ class ApiClient {
       case ['customers']:
         _requireRole('agent');
         final term = (q['q'] ?? '').trim();
+        if (term.isEmpty) return {'results': await _myCustomers()};
         return {'results': term.length < 2 ? [] : await _searchCustomers(term)};
       case ['customers', final id]:
         return _customer(id);
@@ -489,7 +496,23 @@ class ApiClient {
         ],
       };
 
-  /// Exact mobile, account or citizenship number, or the start of the customer's name.
+  static final _nameTermRe = RegExp(r"^[\p{L} .'-]{2,}$", unicode: true);
+
+  /// The customers this agent onboarded (newest first), shown when the search box is empty.
+  Future<List<Map<String, dynamic>>> _myCustomers() async {
+    // No orderBy in the query: that would need a composite index. Up to 50 rows are sorted here.
+    final docs = (await _db.collection('customers').where('createdByAgent', isEqualTo: _uid).limit(50).get()).docs
+      ..sort((x, y) => '${y.data()['createdAt'] ?? ''}'.compareTo('${x.data()['createdAt'] ?? ''}'));
+    return [for (final d in docs) _summary(d.id, d.data(), await _accountsFor(d.id))];
+  }
+
+  /// One search box for everything; the kind of text decides what is looked up, so the agent
+  /// never types a label, and part of a value is enough:
+  ///  - letters       -> any part of the name ("hari", "thap", "bahadur t")
+  ///  - CUST-123456   -> customer ID
+  ///  - digits        -> any part of a mobile number (also +977 98..., 98 4123, 98-4123), of a
+  ///                     citizenship number (27-01 or 0491) or of the customer ID; a whole
+  ///                     account number finds that account's customer
   Future<List<Map<String, dynamic>>> _searchCustomers(String term) async {
     final found = <String, Map<String, dynamic>>{};
     void add(QuerySnapshot<Map<String, dynamic>> q) {
@@ -499,24 +522,68 @@ class ApiClient {
     }
 
     final customers = _db.collection('customers');
-    if (RegExp(r'^\d{10}$').hasMatch(term)) add(await customers.where('mobile', isEqualTo: term).get());
-    if (RegExp(r'^[\d-]{6,}$').hasMatch(term)) add(await customers.where('citizenshipNo', isEqualTo: term).get());
-    if (RegExp(r'^\d{8,}$').hasMatch(term)) {
-      final acc = (await _doc('accounts', term).get()).data();
-      if (acc != null) {
-        final c = await _doc('customers', acc['customerId'] as String).get();
-        if (c.exists) found[c.id] = c.data()!;
+    term = term.trim().replaceAll(RegExp(r'\s+'), ' ');
+
+    // Customer ID, e.g. CUST-123456 (the dash and the case are optional).
+    final idMatch = RegExp(r'^cust-?(\d{3,})$', caseSensitive: false).firstMatch(term);
+    if (idMatch != null) {
+      final c = await _doc('customers', 'CUST-${idMatch.group(1)}').get();
+      if (c.exists) found[c.id] = c.data()!;
+    }
+
+    // Numbers: ignore spaces, brackets and a leading +; a typed +977 country code is dropped.
+    var digits = term.replaceAll(RegExp(r'[\s+()]'), '');
+    final isNumeric = RegExp(r'^\d[\d-]*$').hasMatch(digits);
+    if (isNumeric) {
+      if (term.startsWith('+') && RegExp(r'^977\d{7,}$').hasMatch(digits)) digits = digits.substring(3);
+      final plain = digits.replaceAll('-', '');
+      // Exact matches first (indexed, so found however many customers there are).
+      if (RegExp(r'^\d{10}$').hasMatch(plain)) add(await customers.where('mobile', isEqualTo: plain).get());
+      if (plain.length >= 6) add(await customers.where('citizenshipNo', isEqualTo: digits).get());
+      if (RegExp(r'^\d{8,}$').hasMatch(plain)) {
+        final acc = (await _doc('accounts', plain).get()).data();
+        if (acc != null) {
+          final c = await _doc('customers', acc['customerId'] as String).get();
+          if (c.exists) found[c.id] = c.data()!;
+        }
+      }
+      // Part of a number: at least 3 digits, matched anywhere in the value.
+      if (plain.length >= 3) {
+        for (final d in (await customers.limit(500).get()).docs) {
+          final c = d.data();
+          final mobile = '${c['mobile'] ?? ''}';
+          final cit = '${c['citizenshipNo'] ?? ''}';
+          if (mobile.contains(plain) ||
+              cit.contains(digits) ||
+              cit.replaceAll('-', '').contains(plain) ||
+              d.id.replaceAll(RegExp(r'\D'), '').contains(plain)) {
+            found.putIfAbsent(d.id, () => c);
+          }
+        }
       }
     }
-    if (RegExp(r'^[a-zA-Z ]{2,}$').hasMatch(term)) {
+
+    // Names: every word typed must appear in the name, so "har", "thapa" and "hari thapa" all
+    // find Hari Bahadur Thapa.
+    if (!isNumeric && _nameTermRe.hasMatch(term)) {
       final lower = term.toLowerCase();
+      // Start of the full name, using the index (finds customers beyond the first 500).
       add(await customers
           .where('nameLower', isGreaterThanOrEqualTo: lower)
-          .where('nameLower', isLessThanOrEqualTo: '$lower')
+          .where('nameLower', isLessThanOrEqualTo: '$lower\uf8ff')
           .limit(20)
           .get());
+      // Any part of the name. Firestore cannot search inside text, so look through the
+      // customers here; fine for a branch-sized list, capped at 500.
+      final words = lower.split(RegExp(r'[\s.]+')).where((w) => w.isNotEmpty).toList();
+      if (words.isNotEmpty) {
+        for (final d in (await customers.limit(500).get()).docs) {
+          final name = '${d.data()['nameLower'] ?? ''}';
+          if (words.every(name.contains)) found.putIfAbsent(d.id, () => d.data());
+        }
+      }
     }
-    return [for (final e in found.entries) _summary(e.key, e.value, await _accountsFor(e.key))];
+    return [for (final e in found.entries.take(30)) _summary(e.key, e.value, await _accountsFor(e.key))];
   }
 
   Future<Map<String, dynamic>> _customer(String id) async {
@@ -557,9 +624,12 @@ class ApiClient {
   static Map<String, dynamic> _documentRecord(dynamic v) {
     String? text(dynamic x) => x is String && x.trim().isNotEmpty ? x.trim() : null;
     final m = v is Map ? v : const {};
-    final url = text(m['url']), storagePath = text(m['storagePath']);
+    final url = text(m['url']), storagePath = text(m['storagePath']), ref = text(m['ref']);
     return {
-      'captured': v == true || m['captured'] == true || url != null || storagePath != null,
+      'captured': v == true || m['captured'] == true || url != null || storagePath != null || ref != null,
+      // `ref` points at the image stored in the customerDocuments collection (see documentBytes).
+      'ref': ref,
+      'size': m['size'] is num ? (m['size'] as num).toInt() : null,
       'storagePath': storagePath,
       'url': url,
       'contentType': text(m['contentType']),
@@ -642,15 +712,18 @@ class ApiClient {
     if (pan.isNotEmpty && !RegExp(r'^\d{9}$').hasMatch(pan)) throw _invalid('pan', 'PAN must be 9 digits');
     final ward = address['ward'];
     if (ward is! int || ward < 1 || ward > 35) throw _invalid('address.ward', 'Ward between 1 and 35');
-    // Each document may arrive as the checklist tick (`true`) or as an uploaded file record.
-    final docRecords = {for (final k in documentKinds) k: _documentRecord(documents[k])};
-    if (docRecords['citizenshipFront']!['captured'] != true) {
-      throw _invalid('documents.citizenshipFront', 'Capture the front of the citizenship certificate');
+    for (final (key, message) in [
+      ('citizenshipFront', 'Add the front of the citizenship certificate'),
+      ('citizenshipBack', 'Add the back of the citizenship certificate'),
+      ('photo', 'Add the customer’s photo'),
+    ]) {
+      final f = documents[key];
+      if (f is! PickedDoc) throw _invalid('documents.$key', message);
+      if (f.bytes.isEmpty) throw _invalid('documents.$key', 'This file is empty');
+      if (f.bytes.length > _maxDocBytes) {
+        throw _invalid('documents.$key', 'This image is too large (over 600 KB). Retake it or choose a smaller file');
+      }
     }
-    if (docRecords['citizenshipBack']!['captured'] != true) {
-      throw _invalid('documents.citizenshipBack', 'Capture the back of the citizenship certificate');
-    }
-    if (docRecords['photo']!['captured'] != true) throw _invalid('documents.photo', 'Capture the customer’s photo');
     if (b['consent'] != true) throw _invalid('consent', 'The customer must agree to the terms');
 
     final tole = str('tole', address);
@@ -681,7 +754,8 @@ class ApiClient {
         'ward': ward,
         if (tole.isNotEmpty) 'tole': tole,
       },
-      'documents': docRecords,
+      // The picked files, replaced by records of the stored images (see _onboard).
+      'documents': documents,
     };
     data.removeWhere((_, v) => v == null);
     (data['family'] as Map).removeWhere((_, v) => v == null);
@@ -707,6 +781,23 @@ class ApiClient {
     final customerId = 'CUST-${100000 + _random.nextInt(900000)}';
     final accountNo = '0102${10000000 + _random.nextInt(90000000)}';
     final now = _iso();
+
+    // The three images are saved in the same transaction as the customer, in their own
+    // collection (kept separate so customer lists stay small and only the agent and supervisors
+    // can read the images). Either everything is saved or nothing is.
+    final files = Map<String, PickedDoc>.from(input['documents'] as Map);
+    final refs = <String, Map<String, dynamic>>{
+      for (final e in files.entries)
+        e.key: {
+          'captured': true,
+          'ref': 'customerDocuments/${customerId}_${e.key}',
+          'contentType': e.value.contentType,
+          'size': e.value.bytes.length,
+          'uploadedAt': now,
+        },
+    };
+    input = {...input, 'documents': refs};
+
     await _db.runTransaction((tx) async {
       // IDs are random; make sure neither is taken (the rules also refuse to overwrite).
       if ((await tx.get(_doc('customers', customerId))).exists || (await tx.get(_doc('accounts', accountNo))).exists) {
@@ -719,6 +810,17 @@ class ApiClient {
         'createdByAgent': agentId,
         'createdAt': now,
       });
+      for (final e in files.entries) {
+        tx.set(_doc('customerDocuments', '${customerId}_${e.key}'), {
+          'customerId': customerId,
+          'agentId': agentId,
+          'kind': e.key,
+          'contentType': e.value.contentType,
+          'size': e.value.bytes.length,
+          'data': Blob(e.value.bytes),
+          'createdAt': now,
+        });
+      }
       tx.set(_doc('accounts', accountNo), {
         'customerId': customerId,
         'productName': 'Bachat Khata (Savings)',
@@ -736,6 +838,17 @@ class ApiClient {
       'accountMasked': _maskAccount(accountNo),
       'kycStatus': 'pending_review',
     };
+  }
+
+  /// The stored bytes of a customer's KYC image (the agent who onboarded them, or a supervisor).
+  Future<Uint8List?> documentBytes(String ref) async {
+    try {
+      final id = ref.split('/').last;
+      final data = (await _doc('customerDocuments', id).get()).data()?['data'];
+      return data is Blob ? data.bytes : null;
+    } on FirebaseException {
+      return null;
+    }
   }
 
   Future<void> _reviewKyc(String customerId, Map<String, dynamic> b) async {
@@ -1408,7 +1521,14 @@ class ApiClient {
       ],
       'pendingKyc': [
         for (final c in pending)
-          {'customerId': c['id'], 'name': _fullName(c), 'createdByAgent': c['createdByAgent'], 'createdAt': c['createdAt']},
+          {
+            'customerId': c['id'],
+            'name': _fullName(c),
+            'createdByAgent': c['createdByAgent'],
+            'createdAt': c['createdAt'],
+            // References to the KYC images (absent on customers made before uploads existed).
+            'documents': c['documents'],
+          },
       ],
       'eodMismatches': await rows(_db.collection('eodReports').where('status', isEqualTo: 'mismatch')),
       'openDisputes': await rows(_db.collection('disputes').where('status', isEqualTo: 'open')),

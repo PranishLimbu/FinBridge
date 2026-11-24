@@ -533,7 +533,7 @@ abstract class AppLocalizations {
   /// No description provided for @findCustomerSub.
   ///
   /// In en, this message translates to:
-  /// **'Mobile, account or name'**
+  /// **'Name, mobile, account or ID'**
   String get findCustomerSub;
 
   /// No description provided for @todaysTransactions.
@@ -611,7 +611,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchHint.
   ///
   /// In en, this message translates to:
-  /// **'Mobile, account, citizenship no. or name'**
+  /// **'Name, part of a mobile / citizenship no., account no. or ID'**
   String get searchHint;
 
   /// No description provided for @searchPrompt.
@@ -2021,7 +2021,7 @@ abstract class AppLocalizations {
   /// No description provided for @documentsMissing.
   ///
   /// In en, this message translates to:
-  /// **'Capture both sides of the citizenship certificate and the customer’s photo'**
+  /// **'Add both sides of the citizenship certificate and the customer’s photo'**
   String get documentsMissing;
 
   /// No description provided for @mustAgree.
@@ -2527,6 +2527,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open the application and check the details and documents first'**
   String get errKycNotOpened;
+
+  /// No description provided for @searchLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Search customer'**
+  String get searchLabel;
+
+  /// No description provided for @loadingCustomers.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your customers…'**
+  String get loadingCustomers;
+
+  /// No description provided for @noOwnCustomers.
+  ///
+  /// In en, this message translates to:
+  /// **'You have not onboarded any customers yet. Type above to find an existing customer, or tap New customer.'**
+  String get noOwnCustomers;
+
+  /// No description provided for @yourCustomers.
+  ///
+  /// In en, this message translates to:
+  /// **'Your customers ({count})'**
+  String yourCustomers(int count);
+
+  /// No description provided for @customersFound.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} found'**
+  String customersFound(int count);
+
+  /// No description provided for @documentsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a clear photo with the camera, or upload an image file (JPG, PNG or WebP). Images are shrunk automatically and saved securely for the bank supervisor to check.'**
+  String get documentsHelp;
+
+  /// No description provided for @takePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Take photo'**
+  String get takePhoto;
+
+  /// No description provided for @retakePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Retake'**
+  String get retakePhoto;
+
+  /// No description provided for @uploadFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload file'**
+  String get uploadFile;
+
+  /// No description provided for @notAddedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not added yet'**
+  String get notAddedYet;
+
+  /// No description provided for @removeFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get removeFile;
+
+  /// No description provided for @imageError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not get the image: {message}'**
+  String imageError(String message);
 }
 
 class _AppLocalizationsDelegate
