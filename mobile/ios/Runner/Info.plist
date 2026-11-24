@@ -14,6 +14,10 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>NSCameraUsageDescription</key>
+	<string>The camera is used to photograph a new customer and their citizenship certificate.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose an existing photo of the customer or their citizenship certificate.</string>
 	<key>CFBundleName</key>
 	<string>finbridge_agent</string>
 	<key>CFBundlePackageType</key>

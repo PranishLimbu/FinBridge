@@ -16,6 +16,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: any
+  image_picker: ^1.2.4
   nepali_utils: ^3.0.8
   pdf: ^3.13.1
   printing: ^5.15.1

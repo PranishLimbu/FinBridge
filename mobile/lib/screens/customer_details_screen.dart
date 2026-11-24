@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -297,20 +299,78 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen> {
       ]);
 }
 
-/// One onboarding document: the uploaded scan when there is one, otherwise whether the agent
-/// ticked it as checked.
-class _DocumentTile extends StatelessWidget {
+/// One onboarding document: the uploaded image when there is one (stored in Firestore under
+/// `ref`, or at a download `url`), otherwise whether the agent ticked it as checked.
+class _DocumentTile extends StatefulWidget {
   const _DocumentTile(this.label, this.record);
 
   final String label;
   final dynamic record;
 
   @override
+  State<_DocumentTile> createState() => _DocumentTileState();
+}
+
+class _DocumentTileState extends State<_DocumentTile> {
+  Future<Uint8List?>? _bytes;
+
+  Map get _r => widget.record is Map ? widget.record as Map : const {};
+
+  @override
+  void initState() {
+    super.initState();
+    final ref = _r['ref'];
+    if (ref is String && ref.isNotEmpty) _bytes = context.read<Session>().api.documentBytes(ref);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final r = record is Map ? record as Map : const {};
-    final url = r['url'] as String?;
-    final captured = r['captured'] == true;
+    final label = widget.label;
+    final url = _r['url'] as String?;
+    final captured = _r['captured'] == true;
+
+    Widget error() => Padding(
+          padding: const EdgeInsets.all(12),
+          child: Text(l10n.docLoadError, style: const TextStyle(color: FbColors.danger)),
+        );
+
+    Widget image(ImageProvider provider, {double? height}) => Image(
+          image: provider,
+          height: height,
+          width: double.infinity,
+          fit: height == null ? BoxFit.contain : BoxFit.cover,
+          semanticLabel: label,
+          errorBuilder: (_, __, ___) => error(),
+        );
+
+    Widget preview(ImageProvider provider) => InkWell(
+          onTap: () => showDialog<void>(
+            context: context,
+            builder: (_) => Dialog(child: InteractiveViewer(child: image(provider))),
+          ),
+          child: ClipRRect(borderRadius: BorderRadius.circular(8), child: image(provider, height: 160)),
+        );
+
+    Widget body;
+    if (_bytes != null) {
+      body = FutureBuilder<Uint8List?>(
+        future: _bytes,
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return const SizedBox(height: 80, child: Center(child: CircularProgressIndicator()));
+          }
+          final data = snap.data;
+          return data == null ? error() : preview(MemoryImage(data));
+        },
+      );
+    } else if (url != null) {
+      body = preview(NetworkImage(url));
+    } else {
+      body = Text(captured ? l10n.docNoFile : l10n.docMissing,
+          style: TextStyle(fontSize: 12, color: captured ? FbColors.textMuted : FbColors.danger));
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -321,35 +381,8 @@ class _DocumentTile extends StatelessWidget {
           Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600))),
         ]),
         const SizedBox(height: 4),
-        if (url != null)
-          InkWell(
-            onTap: () => showDialog<void>(
-              context: context,
-              builder: (_) => Dialog(
-                child: InteractiveViewer(child: Image.network(url, errorBuilder: (_, __, ___) => _loadError(l10n))),
-              ),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                url,
-                height: 160,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                semanticLabel: label,
-                errorBuilder: (_, __, ___) => _loadError(l10n),
-              ),
-            ),
-          )
-        else
-          Text(captured ? l10n.docNoFile : l10n.docMissing,
-              style: TextStyle(fontSize: 12, color: captured ? FbColors.textMuted : FbColors.danger)),
+        body,
       ]),
     );
   }
-
-  Widget _loadError(AppLocalizations l10n) => Padding(
-        padding: const EdgeInsets.all(12),
-        child: Text(l10n.docLoadError, style: const TextStyle(color: FbColors.danger)),
-      );
 }
