@@ -117,7 +117,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextFormField(
                           controller: _agentId,
                           textCapitalization: TextCapitalization.characters,
-                          decoration: InputDecoration(hintText: l10n.agentIdHint),
                           validator: (v) => (v == null || v.trim().length < 3) ? l10n.agentIdError : null,
                         ),
                         const SizedBox(height: 14),
@@ -164,9 +163,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                Text(l10n.demoLoginHint,
-                    textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: FbColors.textMuted)),
               ],
             ),
           ),
